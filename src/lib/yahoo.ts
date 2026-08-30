@@ -1,5 +1,6 @@
 import type { Candle, Quote } from "../types";
 import { swr, quoteTtl } from "./cache";
+import { setDataError } from "./status";
 
 const BASE = "/api/yahoo";
 
@@ -9,8 +10,22 @@ function api(path: string, params: Record<string, string>): string {
 }
 
 async function getJson<T>(url: string): Promise<T> {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`yahoo ${r.status}`);
+  let r: Response;
+  try {
+    r = await fetch(url);
+  } catch {
+    setDataError("Can't reach the data server. Check your connection.");
+    throw new Error("network");
+  }
+  if (!r.ok) {
+    setDataError(
+      r.status >= 500
+        ? "The price data source is unavailable right now. Cached values are shown where possible."
+        : `Price data request failed (${r.status}).`
+    );
+    throw new Error(`yahoo ${r.status}`);
+  }
+  setDataError(null);
   return (await r.json()) as T;
 }
 

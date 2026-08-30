@@ -51,8 +51,16 @@ button { font: inherit; cursor: pointer; }
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
+.topbar { display: flex; align-items: baseline; gap: 8px; }
 .brand { font-weight: 700; font-size: 17px; }
+.ver { font-size: 10px; color: var(--muted); }
 .content { flex: 1; padding-bottom: 76px; }
+
+.databanner {
+  background: rgba(255, 120, 80, 0.15); color: #ff8a5c;
+  font-size: 12px; padding: 8px 16px; text-align: center;
+  border-bottom: 1px solid var(--border);
+}
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;

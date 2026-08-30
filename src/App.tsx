@@ -1,15 +1,23 @@
+import { useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { WatchlistPage } from "./routes/WatchlistPage";
 import { MutualFundsPage } from "./routes/MutualFundsPage";
 import { AnalyseStockPage } from "./routes/AnalyseStockPage";
 import { AnalyseFundPage } from "./routes/AnalyseFundPage";
+import { getDataError, onDataError } from "./lib/status";
 
 export default function App() {
+  const [err, setErr] = useState<string | null>(getDataError());
+  useEffect(() => onDataError(setErr), []);
+
   return (
     <div className="app">
       <header className="topbar">
         <span className="brand">📈 Watchlist</span>
+        <span className="ver">build 2</span>
       </header>
+
+      {err && <div className="databanner">{err}</div>}
 
       <main className="content">
         <Routes>
