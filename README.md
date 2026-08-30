@@ -54,16 +54,31 @@ npm i -g vercel
 vercel dev
 ```
 
-## Deploy (Vercel, free)
+## Deploy free (Vercel)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/natraj-b/watchlisttracker)
+
+**Dashboard (recommended):**
+
+1. Open <https://vercel.com/new> and sign in with GitHub
+2. Import the **watchlisttracker** repo
+3. Framework preset auto-detects as **Vite** — leave every default, click **Deploy**
+4. ~1 min later you get a live `https://<name>.vercel.app` URL
+
+No environment variables. `api/yahoo.ts` deploys automatically as a serverless
+function. Every `git push` to `main` redeploys. Open the URL on your phone and
+"Add to Home Screen" for a PWA-style app.
+
+**Or via CLI:**
 
 ```bash
 npm i -g vercel
-vercel
+vercel        # first run links the project and logs you in
+vercel --prod # deploy to the production URL
 ```
 
-Vercel auto-detects Vite, builds the static site, and deploys `api/yahoo.ts` as a
-serverless function. No environment variables needed. Open the URL on your phone
-and "Add to Home Screen" for a PWA-style app.
+GitHub Pages is *not* an option on its own — it serves static files only and
+can't run `api/yahoo.ts`, which is required for stock/index data.
 
 ## Adding an index
 
