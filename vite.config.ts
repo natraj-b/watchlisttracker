@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { ALLOWED_PREFIXES, yahooFetch } from "./api/_yahooCore";
+import { ALLOWED_PREFIXES, yahooFetch } from "./shared/yahooCore";
 
 // Dev-only middleware that mirrors api/yahoo.ts so `npm run dev` needs no Vercel.
 function yahooDevProxy(): Plugin {

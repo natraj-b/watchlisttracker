@@ -1,6 +1,6 @@
 // Vercel serverless proxy for Yahoo Finance.
 // Browser -> /api/yahoo?path=/v7/finance/quote&symbols=RELIANCE.NS
-import { ALLOWED_PREFIXES, yahooFetch } from "./_yahooCore";
+import { ALLOWED_PREFIXES, yahooFetch } from "../shared/yahooCore";
 
 export default async function handler(req: any, res: any) {
   res.setHeader("Access-Control-Allow-Origin", "*");
