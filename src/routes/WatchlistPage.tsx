@@ -8,6 +8,7 @@ import { num, pct, signClass } from "../lib/format";
 import { RefreshBar } from "../components/RefreshBar";
 import { TickerRow } from "../components/TickerRow";
 import { Sparkline } from "../components/Sparkline";
+import { MetricGrid } from "../components/MetricGrid";
 import { AddSymbolSheet } from "../components/AddSymbolSheet";
 import { RecommendationLadder, type LadderRow } from "../components/RecommendationLadder";
 
@@ -436,64 +437,73 @@ function IndicesView({
         return (
           <div key={g}>
             <h3 className="idx-group">{g}</h3>
-            <div className="table-scroll">
-              <table className="idx-table">
-                <thead>
-                  <tr>
-                    <th>Symbol</th>
-                    <th>Name</th>
-                    <th>CMP</th>
-                    <th>Drop from ATH</th>
-                    <th>1Y trend</th>
-                    <th>1Y ret</th>
-                    <th>5Y ret</th>
-                    <th>10Y ret</th>
-                    <th>1Y ago</th>
-                    <th>5Y ago</th>
-                    <th>10Y ago</th>
-                    <th>ATH</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((i) => {
-                    const stats = deriveIdxStats(
-                      histories[i.symbol] || [],
-                      quotes[i.symbol]?.price ?? null
-                    );
-                    const bare = i.symbol.replace(/^\^/, "").replace(/\.NS$/i, "");
-                    const dropMag =
-                      stats.dropFromAth != null ? Math.min(1, Math.abs(stats.dropFromAth) / 50) : 0;
-                    const dp = (v: number | null) => num(v, v != null && v >= 1000 ? 0 : 2);
-                    return (
-                      <tr key={i.symbol}>
-                        <td className="idx-sym">{bare}</td>
-                        <td className="idx-name">{i.name}</td>
-                        <td className="idx-cmp">{dp(stats.cmp)}</td>
-                        <td
-                          className="idx-drop"
-                          style={
-                            stats.dropFromAth != null
-                              ? { background: `rgba(229,72,77,${(0.12 + dropMag * 0.55).toFixed(2)})` }
-                              : undefined
-                          }
-                        >
-                          {pct(stats.dropFromAth, 1)}
-                        </td>
-                        <td className="idx-trend">
-                          <Sparkline data={stats.trend1y} width={56} height={20} />
-                        </td>
-                        <td className={signClass(stats.ret1y)}>{pct(stats.ret1y, 1)}</td>
-                        <td className={signClass(stats.ret5y)}>{pct(stats.ret5y, 1)}</td>
-                        <td className={signClass(stats.ret10y)}>{pct(stats.ret10y, 1)}</td>
-                        <td>{dp(stats.p1y)}</td>
-                        <td>{dp(stats.p5y)}</td>
-                        <td>{dp(stats.p10y)}</td>
-                        <td>{dp(stats.ath)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="idx-cards">
+              {rows.map((i) => {
+                const stats = deriveIdxStats(
+                  histories[i.symbol] || [],
+                  quotes[i.symbol]?.price ?? null
+                );
+                const bare = i.symbol.replace(/^\^/, "").replace(/\.NS$/i, "");
+                const dp = (v: number | null) => num(v, v != null && v >= 1000 ? 0 : 2);
+                const drop = stats.dropFromAth;
+                const dropTier =
+                  drop == null ? "" : drop >= -5 ? "near-high" : drop >= -15 ? "mid" : "deep";
+                return (
+                  <div key={i.symbol} className="idxrow">
+                    <div className="idxrow-top">
+                      <div className="idxrow-id">
+                        <span className="idxrow-sym">{bare}</span>
+                        <span className="idxrow-name">{i.name}</span>
+                      </div>
+                      <Sparkline data={stats.trend1y} width={64} height={26} />
+                    </div>
+
+                    <div className="idxrow-main">
+                      <span className="idxrow-cmp">{dp(stats.cmp)}</span>
+                      {drop != null ? (
+                        <span className={"idxrow-drop " + dropTier}>
+                          {pct(drop, 1)} from high
+                        </span>
+                      ) : (
+                        <span className="idxrow-drop na">history unavailable</span>
+                      )}
+                    </div>
+
+                    <div className="idxrow-rets">
+                      <div className="idxrow-ret">
+                        <span className="idxrow-ret-l">1Y</span>
+                        <span className={"idxrow-ret-v " + signClass(stats.ret1y)}>
+                          {pct(stats.ret1y, 1)}
+                        </span>
+                      </div>
+                      <div className="idxrow-ret">
+                        <span className="idxrow-ret-l">5Y</span>
+                        <span className={"idxrow-ret-v " + signClass(stats.ret5y)}>
+                          {pct(stats.ret5y, 1)}
+                        </span>
+                      </div>
+                      <div className="idxrow-ret">
+                        <span className="idxrow-ret-l">10Y</span>
+                        <span className={"idxrow-ret-v " + signClass(stats.ret10y)}>
+                          {pct(stats.ret10y, 1)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <details className="idxrow-more">
+                      <summary>Price history</summary>
+                      <MetricGrid
+                        items={[
+                          { label: "1Y ago", value: dp(stats.p1y) },
+                          { label: "5Y ago", value: dp(stats.p5y) },
+                          { label: "10Y ago", value: dp(stats.p10y) },
+                          { label: "All-time high", value: dp(stats.ath) },
+                        ]}
+                      />
+                    </details>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
