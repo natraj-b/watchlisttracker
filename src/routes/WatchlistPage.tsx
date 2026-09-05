@@ -416,7 +416,14 @@ function IndicesView({
     (async () => {
       for (const idx of visible) {
         if (histories[idx.symbol]) continue;
-        const { candles } = await getChart(idx.symbol, "max");
+        let { candles } = await getChart(idx.symbol, "max");
+        // Yahoo silently returns almost nothing for "max" range on several
+        // sector indices even though they do have real daily history over a
+        // shorter window — fall back to that when "max" comes back too thin.
+        if (candles.length < 10) {
+          const fallback = await getChart(idx.symbol, "5y");
+          if (fallback.candles.length > candles.length) candles = fallback.candles;
+        }
         if (cancelled) return;
         setHistories((p) => ({ ...p, [idx.symbol]: candles }));
       }
@@ -452,8 +459,8 @@ function IndicesView({
                   <div key={i.symbol} className="idxrow">
                     <div className="idxrow-top">
                       <div className="idxrow-id">
-                        <span className="idxrow-sym">{bare}</span>
                         <span className="idxrow-name">{i.name}</span>
+                        <span className="idxrow-sym">{bare}</span>
                       </div>
                       <Sparkline data={stats.trend1y} width={64} height={26} />
                     </div>
