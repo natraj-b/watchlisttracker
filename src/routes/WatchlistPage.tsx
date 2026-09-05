@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Quote, Section, WatchItem } from "../types";
+import type { Candle, Quote, Section, WatchItem } from "../types";
 import { onStoreChange, store } from "../lib/storage";
 import { getChart, getQuotes, getQuoteSummary } from "../lib/yahoo";
 import { INDICES, guessSection } from "../lib/symbols";
 import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
+import { num, pct, signClass } from "../lib/format";
 import { RefreshBar } from "../components/RefreshBar";
 import { TickerRow } from "../components/TickerRow";
-import { IndexCard } from "../components/IndexCard";
+import { Sparkline } from "../components/Sparkline";
 import { AddSymbolSheet } from "../components/AddSymbolSheet";
 import { RecommendationLadder, type LadderRow } from "../components/RecommendationLadder";
 
@@ -334,6 +335,69 @@ function TodaysPickView({
   );
 }
 
+interface IdxStats {
+  cmp: number | null;
+  ath: number | null;
+  p1y: number | null;
+  p5y: number | null;
+  p10y: number | null;
+  ret1y: number | null;
+  ret5y: number | null;
+  ret10y: number | null;
+  dropFromAth: number | null;
+  trend1y: number[];
+}
+
+function nearestOnOrBefore(candles: Candle[], targetSec: number): number | null {
+  let result: number | null = null;
+  for (const c of candles) {
+    if (c.t <= targetSec) result = c.c;
+    else break;
+  }
+  return result;
+}
+
+function deriveIdxStats(candles: Candle[], livePrice: number | null): IdxStats {
+  // Yahoo has essentially no history for some symbols (a single data point) —
+  // treat that as "no history" rather than reporting a misleading 0% drop.
+  if (candles.length < 4) {
+    return {
+      cmp: livePrice ?? candles[0]?.c ?? null,
+      ath: null,
+      p1y: null,
+      p5y: null,
+      p10y: null,
+      ret1y: null,
+      ret5y: null,
+      ret10y: null,
+      dropFromAth: null,
+      trend1y: candles.map((c) => c.c),
+    };
+  }
+  const nowSec = Date.now() / 1000;
+  const day = 86400;
+  const latestClose = candles[candles.length - 1].c;
+  const cmp = livePrice ?? latestClose;
+  const ath = Math.max(...candles.map((c) => c.c), cmp);
+  const p1y = nearestOnOrBefore(candles, nowSec - 365 * day);
+  const p5y = nearestOnOrBefore(candles, nowSec - 5 * 365 * day);
+  const p10y = nearestOnOrBefore(candles, nowSec - 10 * 365 * day);
+  const ret = (past: number | null) => (past ? ((cmp - past) / past) * 100 : null);
+  const recent = candles.filter((c) => c.t >= nowSec - 365 * day).map((c) => c.c);
+  return {
+    cmp,
+    ath,
+    p1y,
+    p5y,
+    p10y,
+    ret1y: ret(p1y),
+    ret5y: ret(p5y),
+    ret10y: ret(p10y),
+    dropFromAth: ath ? ((cmp - ath) / ath) * 100 : null,
+    trend1y: recent.length >= 2 ? recent : candles.slice(-6).map((c) => c.c),
+  };
+}
+
 function IndicesView({
   hidden,
   quotes,
@@ -343,17 +407,17 @@ function IndicesView({
   quotes: Record<string, Quote>;
   onToggle: (s: string) => void;
 }) {
-  const [sparks, setSparks] = useState<Record<string, number[]>>({});
+  const [histories, setHistories] = useState<Record<string, Candle[]>>({});
   const visible = INDICES.filter((i) => !hidden.includes(i.symbol));
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       for (const idx of visible) {
-        if (sparks[idx.symbol]) continue;
-        const { candles } = await getChart(idx.symbol, "1mo");
+        if (histories[idx.symbol]) continue;
+        const { candles } = await getChart(idx.symbol, "max");
         if (cancelled) return;
-        setSparks((p) => ({ ...p, [idx.symbol]: candles.map((c) => c.c) }));
+        setHistories((p) => ({ ...p, [idx.symbol]: candles }));
       }
     })();
     return () => {
@@ -366,23 +430,73 @@ function IndicesView({
 
   return (
     <div className="idx-view">
-      {groups.map((g) => (
-        <div key={g}>
-          <h3 className="idx-group">{g}</h3>
-          <div className="idx-grid">
-            {visible
-              .filter((i) => i.group === g)
-              .map((i) => (
-                <IndexCard
-                  key={i.symbol}
-                  name={i.name}
-                  quote={quotes[i.symbol]}
-                  spark={sparks[i.symbol] || []}
-                />
-              ))}
+      {groups.map((g) => {
+        const rows = visible.filter((i) => i.group === g);
+        if (!rows.length) return null;
+        return (
+          <div key={g}>
+            <h3 className="idx-group">{g}</h3>
+            <div className="table-scroll">
+              <table className="idx-table">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Name</th>
+                    <th>Drop from ATH</th>
+                    <th>1Y trend</th>
+                    <th>CMP</th>
+                    <th>1Y ago</th>
+                    <th>5Y ago</th>
+                    <th>10Y ago</th>
+                    <th>All-time high</th>
+                    <th>1Y return</th>
+                    <th>5Y return</th>
+                    <th>10Y return</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((i) => {
+                    const stats = deriveIdxStats(
+                      histories[i.symbol] || [],
+                      quotes[i.symbol]?.price ?? null
+                    );
+                    const bare = i.symbol.replace(/^\^/, "").replace(/\.NS$/i, "");
+                    const dropMag =
+                      stats.dropFromAth != null ? Math.min(1, Math.abs(stats.dropFromAth) / 50) : 0;
+                    return (
+                      <tr key={i.symbol}>
+                        <td className="idx-sym">{bare}</td>
+                        <td className="idx-name">{i.name}</td>
+                        <td
+                          className="idx-drop"
+                          style={
+                            stats.dropFromAth != null
+                              ? { background: `rgba(229,72,77,${(0.12 + dropMag * 0.55).toFixed(2)})` }
+                              : undefined
+                          }
+                        >
+                          {pct(stats.dropFromAth)}
+                        </td>
+                        <td className="idx-trend">
+                          <Sparkline data={stats.trend1y} width={64} height={22} />
+                        </td>
+                        <td>{num(stats.cmp, 2)}</td>
+                        <td>{num(stats.p1y, 2)}</td>
+                        <td>{num(stats.p5y, 2)}</td>
+                        <td>{num(stats.p10y, 2)}</td>
+                        <td>{num(stats.ath, 2)}</td>
+                        <td className={signClass(stats.ret1y)}>{pct(stats.ret1y)}</td>
+                        <td className={signClass(stats.ret5y)}>{pct(stats.ret5y)}</td>
+                        <td className={signClass(stats.ret10y)}>{pct(stats.ret10y)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <details className="idx-manage">
         <summary>Show / hide indices</summary>
         <div className="idx-toggles">

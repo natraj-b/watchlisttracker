@@ -245,17 +245,30 @@ button { font: inherit; cursor: pointer; }
 
 /* indices */
 .idx-view { display: flex; flex-direction: column; gap: 4px; }
-.idx-group { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 12px 2px 6px; }
-.idx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.idxcard {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 10px;
+.idx-group { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 14px 2px 6px; }
+.table-scroll {
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border); border-radius: var(--radius);
 }
-.idxcard-top { display: flex; justify-content: space-between; align-items: center; }
-.idxcard-name { font-size: 12px; font-weight: 600; color: var(--muted); }
-.idxcard-bot { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
-.idxcard-lvl { font-size: 17px; font-weight: 700; }
-.idxcard-chg { font-size: 12px; }
+.idx-table { border-collapse: collapse; width: 100%; min-width: 780px; font-size: 12px; }
+.idx-table th {
+  text-align: right; font-weight: 600; color: var(--muted); text-transform: uppercase;
+  font-size: 10px; letter-spacing: 0.02em; padding: 8px 10px; background: var(--surface-2);
+  white-space: nowrap; position: sticky; top: 0;
+}
+.idx-table td {
+  text-align: right; padding: 8px 10px; white-space: nowrap;
+  border-top: 1px solid var(--border); background: var(--surface);
+}
+.idx-table th:first-child, .idx-table td:first-child,
+.idx-table th:nth-child(2), .idx-table td:nth-child(2) {
+  text-align: left; position: sticky; background: var(--surface);
+}
+.idx-table th:first-child, .idx-table td:first-child { left: 0; min-width: 90px; }
+.idx-table th:nth-child(2), .idx-table td:nth-child(2) { left: 90px; min-width: 130px; }
+.idx-sym { font-weight: 700; }
+.idx-name { color: var(--muted); font-size: 11px; }
+.idx-trend { padding: 4px 10px !important; }
 .idx-manage { margin-top: 16px; font-size: 13px; }
 .idx-toggles { display: flex; flex-direction: column; gap: 6px; padding: 8px 2px; }
 .idx-toggles label { display: flex; gap: 8px; align-items: center; color: var(--muted); }
