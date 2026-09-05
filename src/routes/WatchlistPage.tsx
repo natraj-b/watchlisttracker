@@ -64,7 +64,7 @@ export function WatchlistPage() {
   const [tab, setTab] = useState<Tab>("nonfin");
   const [sheet, setSheet] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("flat");
-  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortKey, setSortKey] = useState<SortKey>("metric");
   const [hidden, setHidden] = useState<string[]>(() => store.getHiddenIndices());
 
   const persist = (next: WatchItem[]) => {
