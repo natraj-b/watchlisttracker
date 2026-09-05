@@ -260,12 +260,15 @@ button { font: inherit; cursor: pointer; }
   text-align: right; padding: 8px 10px; white-space: nowrap;
   border-top: 1px solid var(--border); background: var(--surface);
 }
-.idx-table th:first-child, .idx-table td:first-child,
-.idx-table th:nth-child(2), .idx-table td:nth-child(2) {
-  text-align: left; position: sticky; background: var(--surface);
+.idx-table th:first-child, .idx-table td:first-child {
+  text-align: left; position: sticky; left: 0; z-index: 1;
+  background: var(--surface); min-width: 78px;
+  box-shadow: 1px 0 0 var(--border);
 }
-.idx-table th:first-child, .idx-table td:first-child { left: 0; min-width: 90px; }
-.idx-table th:nth-child(2), .idx-table td:nth-child(2) { left: 90px; min-width: 130px; }
+.idx-table th:first-child { background: var(--surface-2); z-index: 2; }
+.idx-table th:nth-child(2), .idx-table td:nth-child(2) {
+  text-align: left; min-width: 130px;
+}
 .idx-sym { font-weight: 700; }
 .idx-name { color: var(--muted); font-size: 11px; }
 .idx-trend { padding: 4px 10px !important; }
