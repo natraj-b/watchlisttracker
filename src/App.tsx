@@ -6,20 +6,36 @@ import { AnalyseStockPage } from "./routes/AnalyseStockPage";
 import { AnalyseFundPage } from "./routes/AnalyseFundPage";
 import { getDataError, onDataError } from "./lib/status";
 import { DataBackupSheet } from "./components/DataBackupSheet";
+import { SyncSheet } from "./components/SyncSheet";
+import { getSyncStatus, onSyncStatus } from "./lib/cloudSync";
 
 export default function App() {
   const [err, setErr] = useState<string | null>(getDataError());
   const [backupOpen, setBackupOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(getSyncStatus().status);
   useEffect(() => onDataError(setErr), []);
+  useEffect(() => onSyncStatus((s) => setSyncStatus(s)), []);
+
+  const synced = syncStatus === "synced";
 
   return (
     <div className="app">
       <header className="topbar">
         <span className="brand">📈 Watchlist</span>
-        <span className="ver">build 5</span>
+        <span className="ver">build 7</span>
         <button
-          className="header-backup"
+          className={"header-icon" + (synced ? " synced" : "")}
+          aria-label={synced ? "Synced — tap for details" : "Sync across devices"}
+          title={synced ? "Synced" : "Sync"}
+          onClick={() => setSyncOpen(true)}
+        >
+          {synced ? "☁✓" : "☁"}
+        </button>
+        <button
+          className="header-icon"
           aria-label="Backup and restore"
+          title="Backup & restore"
           onClick={() => setBackupOpen(true)}
         >
           ⇅
@@ -28,6 +44,7 @@ export default function App() {
 
       {err && <div className="databanner">{err}</div>}
 
+      <SyncSheet open={syncOpen} onClose={() => setSyncOpen(false)} />
       <DataBackupSheet
         open={backupOpen}
         onClose={() => setBackupOpen(false)}

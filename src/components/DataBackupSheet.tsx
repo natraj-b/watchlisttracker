@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { exportToExcel, importFromExcel, type ImportSummary } from "../lib/excel";
-import { SyncSection } from "./SyncSection";
 
 interface Props {
   open: boolean;
@@ -51,10 +50,7 @@ export function DataBackupSheet({ open, onClose, onImported }: Props) {
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
-        <h3>Backup, restore & sync</h3>
-
-        <SyncSection />
-        <div className="backup-divider" />
+        <h3>Backup & restore</h3>
 
         <button className="backup-action" disabled={exporting} onClick={handleExport}>
           ⬇ {exporting ? "Preparing…" : "Export as Excel"}

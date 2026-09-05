@@ -54,10 +54,12 @@ button { font: inherit; cursor: pointer; }
 .topbar { display: flex; align-items: center; gap: 8px; }
 .brand { font-weight: 700; font-size: 17px; }
 .ver { font-size: 10px; color: var(--muted); }
-.header-backup {
-  margin-left: auto; border: 1px solid var(--border); background: var(--surface);
+.header-icon {
+  border: 1px solid var(--border); background: var(--surface);
   color: var(--muted); border-radius: 8px; width: 34px; height: 30px; font-size: 15px;
 }
+.header-icon:first-of-type { margin-left: auto; }
+.header-icon.synced { color: var(--up); border-color: var(--up); }
 
 .backup-action {
   width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px;

@@ -29,7 +29,6 @@ export function SyncSection() {
   if (!cloudSyncConfigured) {
     return (
       <div className="sync-section">
-        <h4>Sync across devices</h4>
         <p className="sync-status">{LABEL.off}</p>
       </div>
     );
@@ -50,8 +49,6 @@ export function SyncSection() {
 
   return (
     <div className="sync-section">
-      <h4>Sync across devices</h4>
-
       {status === "synced" ? (
         <>
           <p className="sync-status ok">
