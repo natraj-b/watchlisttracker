@@ -8,8 +8,9 @@ import { RefreshBar } from "../components/RefreshBar";
 import { TickerRow } from "../components/TickerRow";
 import { IndexCard } from "../components/IndexCard";
 import { AddSymbolSheet } from "../components/AddSymbolSheet";
+import { RecommendationLadder, type LadderRow } from "../components/RecommendationLadder";
 
-type Tab = Section | "idx";
+type Tab = Section | "idx" | "picks";
 
 export function WatchlistPage() {
   const [items, setItems] = useState<WatchItem[]>(() => store.getStocks());
@@ -123,6 +124,9 @@ export function WatchlistPage() {
       <RefreshBar fetchedAt={fetchedAt} busy={busy} onRefresh={refresh} />
 
       <div className="tabs">
+        <button className={tab === "picks" ? "on" : ""} onClick={() => setTab("picks")}>
+          Today's Pick
+        </button>
         <button className={tab === "nonfin" ? "on" : ""} onClick={() => setTab("nonfin")}>
           Non-financial
         </button>
@@ -134,7 +138,9 @@ export function WatchlistPage() {
         </button>
       </div>
 
-      {tab === "idx" ? (
+      {tab === "picks" ? (
+        <TodaysPickView items={items} quotes={quotes} />
+      ) : tab === "idx" ? (
         <IndicesView hidden={hidden} quotes={quotes} onToggle={toggleIndex} />
       ) : (
         <>
@@ -171,6 +177,54 @@ export function WatchlistPage() {
       )}
 
       <AddSymbolSheet open={sheet} onClose={() => setSheet(false)} onAdd={addStock} />
+    </div>
+  );
+}
+
+function TodaysPickView({
+  items,
+  quotes,
+}: {
+  items: WatchItem[];
+  quotes: Record<string, Quote>;
+}) {
+  const peRows: LadderRow[] = items
+    .filter((it) => it.section === "nonfin")
+    .map((it) => ({ it, pe: quotes[it.symbol]?.peTrailing ?? null }))
+    .filter((x): x is { it: WatchItem; pe: number } => x.pe != null && x.pe > 0 && x.pe <= 25)
+    .sort((a, b) => a.pe - b.pe)
+    .map((x) => ({ symbol: x.it.symbol, name: quotes[x.it.symbol]?.name || x.it.name, value: x.pe }));
+
+  const pbRows: LadderRow[] = items
+    .filter((it) => it.section === "fin")
+    .map((it) => ({ it, pb: quotes[it.symbol]?.priceToBook ?? null }))
+    .filter((x): x is { it: WatchItem; pb: number } => x.pb != null && x.pb > 0 && x.pb <= 2)
+    .sort((a, b) => a.pb - b.pb)
+    .map((x) => ({ symbol: x.it.symbol, name: quotes[x.it.symbol]?.name || x.it.name, value: x.pb }));
+
+  return (
+    <div className="picks-view">
+      <p className="picks-note">
+        Ranked from your own watchlist only — cheapest valuation first. Not a
+        buy recommendation; low P/E or P/B can also mean the market sees real
+        risk. Always check why before acting.
+      </p>
+      <RecommendationLadder
+        title="Non-financial · P/E ≤ 25"
+        metricLabel="P/E"
+        rows={peRows}
+        greenMax={20}
+        orangeMax={25}
+        emptyText="No non-financial stock in your watchlist has a P/E of 25 or below right now."
+      />
+      <RecommendationLadder
+        title="Financial · P/B ≤ 2"
+        metricLabel="P/B"
+        rows={pbRows}
+        greenMax={1}
+        orangeMax={2}
+        emptyText="No financial stock in your watchlist has a P/B of 2 or below right now."
+      />
     </div>
   );
 }

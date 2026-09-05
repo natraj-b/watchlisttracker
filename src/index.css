@@ -202,6 +202,27 @@ button { font: inherit; cursor: pointer; }
 
 .empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 13px; }
 
+/* today's pick */
+.picks-view { display: flex; flex-direction: column; gap: 18px; }
+.picks-note { font-size: 12px; color: var(--muted); margin: 0 2px; }
+.ladder-title { font-size: 13px; margin: 0 2px 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
+.ladder-list { display: flex; flex-direction: column; gap: 6px; }
+.ladder-row {
+  display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+}
+.ladder-row.green { border-left-color: var(--up); background: color-mix(in srgb, var(--up) 8%, var(--surface)); }
+.ladder-row.orange { border-left-color: #e0a020; background: color-mix(in srgb, #e0a020 8%, var(--surface)); }
+.ladder-rank { font-size: 12px; color: var(--muted); font-weight: 700; text-align: center; }
+.ladder-id { display: flex; flex-direction: column; min-width: 0; }
+.ladder-sym { font-weight: 700; font-size: 13px; }
+.ladder-name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ladder-val { font-weight: 700; font-size: 14px; display: flex; flex-direction: column; align-items: flex-end; }
+.ladder-val small { font-weight: 400; font-size: 10px; color: var(--muted); }
+.ladder-row.green .ladder-val { color: var(--up); }
+.ladder-row.orange .ladder-val { color: #e0a020; }
+
 /* indices */
 .idx-view { display: flex; flex-direction: column; gap: 4px; }
 .idx-group { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 12px 2px 6px; }
