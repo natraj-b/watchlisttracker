@@ -138,6 +138,26 @@ button { font: inherit; cursor: pointer; }
 }
 .tabs button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 
+/* view/sort toolbar */
+.listbar { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px; }
+.listbar-views { display: flex; gap: 6px; }
+.listbar-views button {
+  padding: 6px 12px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); border-radius: 999px; font-size: 12px; font-weight: 600;
+}
+.listbar-views button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.listbar-sort {
+  margin-left: auto; padding: 6px 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); border-radius: 8px; font-size: 12px;
+}
+.sector-group { margin-bottom: 4px; }
+.sector-group + .sector-group { margin-top: 14px; }
+.sector-heading {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--muted); margin: 0 2px 8px;
+}
+.sector-group .row-wrap + .row-wrap { margin-top: 8px; }
+
 /* rows */
 .list { display: flex; flex-direction: column; gap: 8px; }
 .row-wrap { display: flex; flex-direction: column; }

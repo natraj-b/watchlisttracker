@@ -11,6 +11,51 @@ import { AddSymbolSheet } from "../components/AddSymbolSheet";
 import { RecommendationLadder, type LadderRow } from "../components/RecommendationLadder";
 
 type Tab = Section | "idx" | "picks";
+type ViewMode = "flat" | "sector";
+type SortKey = "name" | "cmp" | "chg" | "metric";
+
+function sortValue(it: WatchItem, key: SortKey, tab: Tab, quotes: Record<string, Quote>) {
+  const q = quotes[it.symbol];
+  switch (key) {
+    case "name":
+      return (q?.name || it.name).toLowerCase();
+    case "cmp":
+      return q?.price ?? null;
+    case "chg":
+      return q?.changePct ?? null;
+    case "metric":
+      return tab === "fin" ? q?.priceToBook ?? null : q?.peTrailing ?? null;
+  }
+}
+
+function sortItems(
+  arr: WatchItem[],
+  key: SortKey,
+  tab: Tab,
+  quotes: Record<string, Quote>
+): WatchItem[] {
+  return [...arr].sort((a, b) => {
+    const va = sortValue(a, key, tab, quotes);
+    const vb = sortValue(b, key, tab, quotes);
+    if (typeof va === "string" || typeof vb === "string") {
+      return String(va ?? "").localeCompare(String(vb ?? ""));
+    }
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    return va - vb;
+  });
+}
+
+function groupBySector(arr: WatchItem[]): [string, WatchItem[]][] {
+  const groups = new Map<string, WatchItem[]>();
+  for (const it of arr) {
+    const key = it.sector || "Uncategorized";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(it);
+  }
+  return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+}
 
 export function WatchlistPage() {
   const [items, setItems] = useState<WatchItem[]>(() => store.getStocks());
@@ -18,6 +63,8 @@ export function WatchlistPage() {
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>("nonfin");
   const [sheet, setSheet] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("flat");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
   const [hidden, setHidden] = useState<string[]>(() => store.getHiddenIndices());
 
   const persist = (next: WatchItem[]) => {
@@ -38,10 +85,11 @@ export function WatchlistPage() {
     setQuotes((prev) => ({ ...prev, ...q }));
     setFetchedAt(oldestAt);
 
-    // Refine classification for unclassified stocks using the company profile
-    // (the plain quote endpoint doesn't return sector/industry).
+    // Refine classification for unclassified stocks (or ones missing a sector
+    // label from before that feature existed) using the company profile — the
+    // plain quote endpoint doesn't return sector/industry.
     const cur = store.getStocks();
-    const pending = cur.filter((it) => !it.classified);
+    const pending = cur.filter((it) => !it.classified || !it.sector);
     if (pending.length) {
       const profiles = await Promise.all(
         pending.map((it) => getQuoteSummary(it.symbol).catch(() => null))
@@ -57,13 +105,19 @@ export function WatchlistPage() {
           prof && (prof.sector || prof.industry)
             ? guessSection(prof.sector ?? null, prof.industry ?? null)
             : null;
-        const section =
-          bySector === "fin"
+        const section = it.classified
+          ? it.section
+          : bySector === "fin"
             ? "fin"
             : byName(q[it.symbol]?.name || it.name) === "fin"
               ? "fin"
               : bySector ?? "nonfin";
-        return { ...it, section, classified: true } as WatchItem;
+        return {
+          ...it,
+          section,
+          classified: true,
+          sector: prof?.sector ?? it.sector ?? null,
+        } as WatchItem;
       });
       if (changed) persist(updated);
     }
@@ -119,6 +173,28 @@ export function WatchlistPage() {
 
   const list = items.filter((i) => i.section === tab);
 
+  function renderRow(it: WatchItem) {
+    return (
+      <div key={it.symbol} className="row-wrap">
+        <TickerRow
+          symbol={it.symbol}
+          name={it.name}
+          section={it.section}
+          quote={quotes[it.symbol]}
+          onRemove={() => removeStock(it.symbol)}
+        />
+        <button
+          className="row-move"
+          onClick={() =>
+            moveSection(it.symbol, it.section === "fin" ? "nonfin" : "fin")
+          }
+        >
+          → {it.section === "fin" ? "Non-fin" : "Financial"}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="page">
       <RefreshBar fetchedAt={fetchedAt} busy={busy} onRefresh={refresh} />
@@ -144,31 +220,53 @@ export function WatchlistPage() {
         <IndicesView hidden={hidden} quotes={quotes} onToggle={toggleIndex} />
       ) : (
         <>
+          <div className="listbar">
+            <div className="listbar-views">
+              <button
+                className={viewMode === "flat" ? "on" : ""}
+                onClick={() => setViewMode("flat")}
+              >
+                Normal
+              </button>
+              <button
+                className={viewMode === "sector" ? "on" : ""}
+                onClick={() => setViewMode("sector")}
+              >
+                By sector
+              </button>
+            </div>
+            <select
+              className="listbar-sort"
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              aria-label="Sort by"
+            >
+              <option value="name">Sort: Name</option>
+              <option value="cmp">Sort: CMP</option>
+              <option value="chg">Sort: Day change</option>
+              <option value="metric">Sort: {tab === "fin" ? "P/B" : "P/E"}</option>
+            </select>
+          </div>
+
           <div className="list">
             {list.length === 0 && (
               <div className="empty">
                 No {tab === "fin" ? "financial" : "non-financial"} stocks yet.
               </div>
             )}
-            {list.map((it) => (
-              <div key={it.symbol} className="row-wrap">
-                <TickerRow
-                  symbol={it.symbol}
-                  name={it.name}
-                  section={it.section}
-                  quote={quotes[it.symbol]}
-                  onRemove={() => removeStock(it.symbol)}
-                />
-                <button
-                  className="row-move"
-                  onClick={() =>
-                    moveSection(it.symbol, it.section === "fin" ? "nonfin" : "fin")
-                  }
-                >
-                  → {it.section === "fin" ? "Non-fin" : "Financial"}
-                </button>
-              </div>
-            ))}
+            {list.length > 0 &&
+              (viewMode === "sector" ? (
+                groupBySector(list).map(([sectorName, sectorItems]) => (
+                  <div key={sectorName} className="sector-group">
+                    <h4 className="sector-heading">{sectorName}</h4>
+                    {sortItems(sectorItems, sortKey, tab, quotes).map((it) =>
+                      renderRow(it)
+                    )}
+                  </div>
+                ))
+              ) : (
+                sortItems(list, sortKey, tab, quotes).map((it) => renderRow(it))
+              ))}
           </div>
           <button className="fab" onClick={() => setSheet(true)}>
             + Add stock

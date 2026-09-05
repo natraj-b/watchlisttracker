@@ -6,6 +6,7 @@ export interface WatchItem {
   section: Section;
   addedAt: number;
   classified?: boolean; // true once auto-classified from Yahoo sector/industry
+  sector?: string | null; // Yahoo GICS-ish sector, e.g. "Financial Services"
 }
 
 export interface Quote {
