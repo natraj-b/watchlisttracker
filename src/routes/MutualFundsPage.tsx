@@ -22,8 +22,6 @@ export function MutualFundsPage() {
     store.setFunds(n);
   };
 
-  useEffect(() => onStoreChange(() => setFunds(store.getFunds())), []);
-
   const load = useCallback(async () => {
     const codes = store.getFunds().map((f) => f.schemeCode);
     let oldest: number | null = null;
@@ -44,6 +42,15 @@ export function MutualFundsPage() {
   }, []);
 
   const { busy, refresh } = useRefreshOnFocus(load);
+
+  useEffect(
+    () =>
+      onStoreChange(() => {
+        setFunds(store.getFunds());
+        refresh();
+      }),
+    [refresh]
+  );
 
   function addFund(s: MfScheme) {
     if (funds.some((f) => f.schemeCode === s.schemeCode)) return;

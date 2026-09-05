@@ -16,7 +16,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <span className="brand">📈 Watchlist</span>
-        <span className="ver">build 4</span>
+        <span className="ver">build 5</span>
         <button
           className="header-backup"
           aria-label="Backup and restore"
@@ -31,7 +31,7 @@ export default function App() {
       <DataBackupSheet
         open={backupOpen}
         onClose={() => setBackupOpen(false)}
-        onImported={() => window.location.reload()}
+        onImported={() => {}}
       />
 
       <main className="content">

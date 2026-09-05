@@ -24,17 +24,6 @@ export function WatchlistPage() {
     store.setStocks(next);
   };
 
-  // Reflect data that changed elsewhere: a Firestore sync from another device,
-  // or an Excel import.
-  useEffect(
-    () =>
-      onStoreChange(() => {
-        setItems(store.getStocks());
-        setHidden(store.getHiddenIndices());
-      }),
-    []
-  );
-
   const load = useCallback(async () => {
     const stockSyms = store.getStocks().map((i) => i.symbol);
     const idxSyms = INDICES.map((i) => i.symbol);
@@ -80,6 +69,18 @@ export function WatchlistPage() {
   }, []);
 
   const { busy, refresh } = useRefreshOnFocus(load);
+
+  // Reflect data that changed elsewhere: a Firestore sync from another device,
+  // or an Excel import. Also fetch quotes/classify anything newly added.
+  useEffect(
+    () =>
+      onStoreChange(() => {
+        setItems(store.getStocks());
+        setHidden(store.getHiddenIndices());
+        refresh();
+      }),
+    [refresh]
+  );
 
   function addStock(symbol: string, name: string) {
     if (items.some((i) => i.symbol === symbol)) {
