@@ -462,7 +462,7 @@ function IndicesView({
                         <span className="idxrow-name">{i.name}</span>
                         <span className="idxrow-sym">{bare}</span>
                       </div>
-                      <Sparkline data={stats.trend1y} width={64} height={26} />
+                      <Sparkline data={stats.trend1y} width={44} height={22} />
                     </div>
 
                     <div className="idxrow-main">
