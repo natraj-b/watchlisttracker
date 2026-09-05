@@ -20,6 +20,11 @@ your device (`localStorage`) — no accounts, no server database.
 - **Auto-refresh** — every time you open the app or return to the tab it shows
   cached values instantly and refreshes in the background. Quote TTL is 60s during
   NSE hours (09:15–15:30 IST, Mon–Fri), 15m otherwise.
+- **Backup & restore (⇅ button, top-right)** — since data lives only in this
+  device's browser, "Export as Excel" downloads a `.xlsx` with your stocks, funds,
+  and research notes. "Import from Excel" restores it (Merge adds/updates on top
+  of what's already there; Replace wipes and reloads from the file). Use this to
+  move your watchlist to another device/browser or keep a backup.
 
 ## Data sources & honest limits
 

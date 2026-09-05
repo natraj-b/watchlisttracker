@@ -5,19 +5,34 @@ import { MutualFundsPage } from "./routes/MutualFundsPage";
 import { AnalyseStockPage } from "./routes/AnalyseStockPage";
 import { AnalyseFundPage } from "./routes/AnalyseFundPage";
 import { getDataError, onDataError } from "./lib/status";
+import { DataBackupSheet } from "./components/DataBackupSheet";
 
 export default function App() {
   const [err, setErr] = useState<string | null>(getDataError());
+  const [backupOpen, setBackupOpen] = useState(false);
   useEffect(() => onDataError(setErr), []);
 
   return (
     <div className="app">
       <header className="topbar">
         <span className="brand">📈 Watchlist</span>
-        <span className="ver">build 2</span>
+        <span className="ver">build 3</span>
+        <button
+          className="header-backup"
+          aria-label="Backup and restore"
+          onClick={() => setBackupOpen(true)}
+        >
+          ⇅
+        </button>
       </header>
 
       {err && <div className="databanner">{err}</div>}
+
+      <DataBackupSheet
+        open={backupOpen}
+        onClose={() => setBackupOpen(false)}
+        onImported={() => window.location.reload()}
+      />
 
       <main className="content">
         <Routes>
