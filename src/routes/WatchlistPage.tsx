@@ -442,16 +442,16 @@ function IndicesView({
                   <tr>
                     <th>Symbol</th>
                     <th>Name</th>
+                    <th>CMP</th>
                     <th>Drop from ATH</th>
                     <th>1Y trend</th>
-                    <th>CMP</th>
+                    <th>1Y ret</th>
+                    <th>5Y ret</th>
+                    <th>10Y ret</th>
                     <th>1Y ago</th>
                     <th>5Y ago</th>
                     <th>10Y ago</th>
-                    <th>All-time high</th>
-                    <th>1Y return</th>
-                    <th>5Y return</th>
-                    <th>10Y return</th>
+                    <th>ATH</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -463,10 +463,12 @@ function IndicesView({
                     const bare = i.symbol.replace(/^\^/, "").replace(/\.NS$/i, "");
                     const dropMag =
                       stats.dropFromAth != null ? Math.min(1, Math.abs(stats.dropFromAth) / 50) : 0;
+                    const dp = (v: number | null) => num(v, v != null && v >= 1000 ? 0 : 2);
                     return (
                       <tr key={i.symbol}>
                         <td className="idx-sym">{bare}</td>
                         <td className="idx-name">{i.name}</td>
+                        <td className="idx-cmp">{dp(stats.cmp)}</td>
                         <td
                           className="idx-drop"
                           style={
@@ -475,19 +477,18 @@ function IndicesView({
                               : undefined
                           }
                         >
-                          {pct(stats.dropFromAth)}
+                          {pct(stats.dropFromAth, 1)}
                         </td>
                         <td className="idx-trend">
-                          <Sparkline data={stats.trend1y} width={64} height={22} />
+                          <Sparkline data={stats.trend1y} width={56} height={20} />
                         </td>
-                        <td>{num(stats.cmp, 2)}</td>
-                        <td>{num(stats.p1y, 2)}</td>
-                        <td>{num(stats.p5y, 2)}</td>
-                        <td>{num(stats.p10y, 2)}</td>
-                        <td>{num(stats.ath, 2)}</td>
-                        <td className={signClass(stats.ret1y)}>{pct(stats.ret1y)}</td>
-                        <td className={signClass(stats.ret5y)}>{pct(stats.ret5y)}</td>
-                        <td className={signClass(stats.ret10y)}>{pct(stats.ret10y)}</td>
+                        <td className={signClass(stats.ret1y)}>{pct(stats.ret1y, 1)}</td>
+                        <td className={signClass(stats.ret5y)}>{pct(stats.ret5y, 1)}</td>
+                        <td className={signClass(stats.ret10y)}>{pct(stats.ret10y, 1)}</td>
+                        <td>{dp(stats.p1y)}</td>
+                        <td>{dp(stats.p5y)}</td>
+                        <td>{dp(stats.p10y)}</td>
+                        <td>{dp(stats.ath)}</td>
                       </tr>
                     );
                   })}
