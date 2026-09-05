@@ -94,13 +94,20 @@ export function WatchlistPage() {
       const profiles = await Promise.all(
         pending.map((it) => getQuoteSummary(it.symbol).catch(() => null))
       );
+      const profileBySymbol = new Map(pending.map((it, i) => [it.symbol, profiles[i]]));
       const byName = (s: string) => guessSection(null, s);
+
+      // Re-read live state before writing back — the watchlist may have
+      // changed (e.g. a manual move between tabs) while the profile fetches
+      // above were in flight. Always defer to the CURRENT classified/section
+      // values, never the pre-fetch snapshot, so a fresh manual edit can't
+      // be clobbered by a slow background classification pass.
+      const fresh = store.getStocks();
       let changed = false;
-      const updated = cur.map((it) => {
-        const idx = pending.findIndex((p) => p.symbol === it.symbol);
-        if (idx === -1) return it;
-        changed = true;
-        const prof = profiles[idx]?.summaryProfile;
+      const updated = fresh.map((it) => {
+        const profResult = profileBySymbol.get(it.symbol);
+        if (!profResult) return it;
+        const prof = profResult?.summaryProfile;
         const bySector =
           prof && (prof.sector || prof.industry)
             ? guessSection(prof.sector ?? null, prof.industry ?? null)
@@ -112,12 +119,12 @@ export function WatchlistPage() {
             : byName(q[it.symbol]?.name || it.name) === "fin"
               ? "fin"
               : bySector ?? "nonfin";
-        return {
-          ...it,
-          section,
-          classified: true,
-          sector: prof?.sector ?? it.sector ?? null,
-        } as WatchItem;
+        const sector = prof?.sector ?? it.sector ?? null;
+        if (it.classified && it.section === section && it.sector === sector) {
+          return it;
+        }
+        changed = true;
+        return { ...it, section, classified: true, sector } as WatchItem;
       });
       if (changed) persist(updated);
     }
