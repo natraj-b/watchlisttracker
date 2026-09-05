@@ -3,7 +3,7 @@ import type { Section } from "../types";
 export interface IndexDef {
   symbol: string;
   name: string;
-  group: "Broad" | "Sector" | "Other";
+  group: "Broad" | "Sector" | "Other" | "Custom";
 }
 
 // Yahoo Finance symbols for Indian indices. A few sector indices are not exposed

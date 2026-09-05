@@ -59,3 +59,9 @@ export interface MfWatchItem {
   schemeName: string;
   addedAt: number;
 }
+
+export interface CustomIndex {
+  symbol: string;
+  name: string;
+  addedAt: number;
+}

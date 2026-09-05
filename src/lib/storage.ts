@@ -1,9 +1,10 @@
-import type { MfWatchItem, WatchItem } from "../types";
+import type { CustomIndex, MfWatchItem, WatchItem } from "../types";
 
 const KEYS = {
   stocks: "iw.watchlist.stocks.v1",
   funds: "iw.watchlist.funds.v1",
   hiddenIndices: "iw.indices.hidden.v1",
+  customIndices: "iw.indices.custom.v1",
   notes: "iw.analyse.notes.v1",
   settings: "iw.settings.v1",
 };
@@ -48,6 +49,7 @@ export interface CloudDoc {
   stocks?: WatchItem[];
   funds?: MfWatchItem[];
   hiddenIndices?: string[];
+  customIndices?: CustomIndex[];
   notes?: Record<string, string>;
 }
 
@@ -81,6 +83,13 @@ export const store = {
     cloudPush?.({ hiddenIndices: v });
   },
 
+  getCustomIndices: (): CustomIndex[] => read<CustomIndex[]>(KEYS.customIndices, []),
+  setCustomIndices: (v: CustomIndex[]) => {
+    write(KEYS.customIndices, v);
+    emit();
+    cloudPush?.({ customIndices: v });
+  },
+
   getNotes: (): Record<string, string> => read(KEYS.notes, {}),
   setNotes: (v: Record<string, string>) => {
     write(KEYS.notes, v);
@@ -97,6 +106,7 @@ export const store = {
     stocks: read<WatchItem[]>(KEYS.stocks, []),
     funds: read<MfWatchItem[]>(KEYS.funds, []),
     hiddenIndices: read<string[]>(KEYS.hiddenIndices, []),
+    customIndices: read<CustomIndex[]>(KEYS.customIndices, []),
     notes: read(KEYS.notes, {}),
   }),
 
@@ -105,6 +115,7 @@ export const store = {
     if (patch.stocks !== undefined) write(KEYS.stocks, patch.stocks);
     if (patch.funds !== undefined) write(KEYS.funds, patch.funds);
     if (patch.hiddenIndices !== undefined) write(KEYS.hiddenIndices, patch.hiddenIndices);
+    if (patch.customIndices !== undefined) write(KEYS.customIndices, patch.customIndices);
     if (patch.notes !== undefined) write(KEYS.notes, patch.notes);
     emit();
   },

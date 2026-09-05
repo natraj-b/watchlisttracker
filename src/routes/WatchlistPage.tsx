@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Candle, Quote, Section, WatchItem } from "../types";
+import type { Candle, CustomIndex, Quote, Section, WatchItem } from "../types";
 import { onStoreChange, store } from "../lib/storage";
 import { getChart, getQuotes, getQuoteSummary } from "../lib/yahoo";
-import { INDICES, guessSection } from "../lib/symbols";
+import { INDICES, guessSection, type IndexDef } from "../lib/symbols";
 import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
 import { num, pct, signClass } from "../lib/format";
 import { RefreshBar } from "../components/RefreshBar";
@@ -68,6 +68,15 @@ export function WatchlistPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("flat");
   const [sortKey, setSortKey] = useState<SortKey>("metric");
   const [hidden, setHidden] = useState<string[]>(() => store.getHiddenIndices());
+  const [customIndices, setCustomIndices] = useState<CustomIndex[]>(() =>
+    store.getCustomIndices()
+  );
+  const [idxSheet, setIdxSheet] = useState(false);
+
+  const allIndices: IndexDef[] = [
+    ...INDICES,
+    ...customIndices.map((c) => ({ symbol: c.symbol, name: c.name, group: "Custom" as const })),
+  ];
 
   const persist = (next: WatchItem[]) => {
     setItems(next);
@@ -77,7 +86,8 @@ export function WatchlistPage() {
   const load = useCallback(async () => {
     const stockSyms = store.getStocks().map((i) => i.symbol);
     const idxSyms = INDICES.map((i) => i.symbol);
-    const all = Array.from(new Set([...stockSyms, ...idxSyms]));
+    const customSyms = store.getCustomIndices().map((i) => i.symbol);
+    const all = Array.from(new Set([...stockSyms, ...idxSyms, ...customSyms]));
     const { quotes: q, oldestAt } = await getQuotes(all, () => {
       getQuotes(all).then(({ quotes: q2, oldestAt: o2 }) => {
         setQuotes((prev) => ({ ...prev, ...q2 }));
@@ -141,6 +151,7 @@ export function WatchlistPage() {
       onStoreChange(() => {
         setItems(store.getStocks());
         setHidden(store.getHiddenIndices());
+        setCustomIndices(store.getCustomIndices());
         refresh();
       }),
     [refresh]
@@ -178,6 +189,23 @@ export function WatchlistPage() {
       : [...hidden, sym];
     setHidden(next);
     store.setHiddenIndices(next);
+  }
+
+  function addCustomIndex(symbol: string, name: string) {
+    if (INDICES.some((i) => i.symbol === symbol) || customIndices.some((i) => i.symbol === symbol)) {
+      setIdxSheet(false);
+      return;
+    }
+    const next = [...customIndices, { symbol, name, addedAt: Date.now() }];
+    setCustomIndices(next);
+    store.setCustomIndices(next);
+    refresh();
+  }
+
+  function removeCustomIndex(symbol: string) {
+    const next = customIndices.filter((i) => i.symbol !== symbol);
+    setCustomIndices(next);
+    store.setCustomIndices(next);
   }
 
   const list = items.filter((i) => i.section === tab);
@@ -226,7 +254,14 @@ export function WatchlistPage() {
       {tab === "picks" ? (
         <TodaysPickView items={items} quotes={quotes} />
       ) : tab === "idx" ? (
-        <IndicesView hidden={hidden} quotes={quotes} onToggle={toggleIndex} />
+        <IndicesView
+          indices={allIndices}
+          hidden={hidden}
+          quotes={quotes}
+          onToggle={toggleIndex}
+          onRemoveCustom={removeCustomIndex}
+          onAddClick={() => setIdxSheet(true)}
+        />
       ) : (
         <>
           <div className="listbar">
@@ -284,6 +319,13 @@ export function WatchlistPage() {
       )}
 
       <AddSymbolSheet open={sheet} onClose={() => setSheet(false)} onAdd={addStock} />
+      <AddSymbolSheet
+        open={idxSheet}
+        onClose={() => setIdxSheet(false)}
+        onAdd={addCustomIndex}
+        title="Add an index"
+        placeholder="Search index or ticker (e.g. Dow Jones, ^DJI, ^GSPC)"
+      />
     </div>
   );
 }
@@ -400,16 +442,22 @@ function deriveIdxStats(candles: Candle[], livePrice: number | null): IdxStats {
 }
 
 function IndicesView({
+  indices,
   hidden,
   quotes,
   onToggle,
+  onRemoveCustom,
+  onAddClick,
 }: {
+  indices: IndexDef[];
   hidden: string[];
   quotes: Record<string, Quote>;
   onToggle: (s: string) => void;
+  onRemoveCustom: (s: string) => void;
+  onAddClick: () => void;
 }) {
   const [histories, setHistories] = useState<Record<string, Candle[]>>({});
-  const visible = INDICES.filter((i) => !hidden.includes(i.symbol));
+  const visible = indices.filter((i) => !hidden.includes(i.symbol));
 
   useEffect(() => {
     let cancelled = false;
@@ -434,7 +482,12 @@ function IndicesView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hidden]);
 
-  const groups: Array<"Broad" | "Sector" | "Other"> = ["Broad", "Sector", "Other"];
+  const groups: Array<"Broad" | "Sector" | "Other" | "Custom"> = [
+    "Broad",
+    "Sector",
+    "Other",
+    "Custom",
+  ];
 
   return (
     <div className="idx-view">
@@ -462,17 +515,33 @@ function IndicesView({
                         <span className="idxrow-name">{i.name}</span>
                         <span className="idxrow-sym">{bare}</span>
                       </div>
-                      <Sparkline data={stats.trend1y} width={44} height={22} />
+                      <div className="idxrow-top-right">
+                        <Sparkline data={stats.trend1y} width={44} height={22} />
+                        <button
+                          className="idxrow-x"
+                          aria-label={`Remove ${i.name}`}
+                          onClick={() =>
+                            g === "Custom" ? onRemoveCustom(i.symbol) : onToggle(i.symbol)
+                          }
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
 
                     <div className="idxrow-main">
                       <span className="idxrow-cmp">{dp(stats.cmp)}</span>
                       {drop != null ? (
-                        <span className={"idxrow-drop " + dropTier}>
-                          {pct(drop, 1)} from high
+                        <span
+                          className={"idxrow-drop " + dropTier}
+                          title="Drop from all-time high"
+                        >
+                          {pct(drop, 1)}
                         </span>
                       ) : (
-                        <span className="idxrow-drop na">history unavailable</span>
+                        <span className="idxrow-drop na" title="No history available">
+                          N/A
+                        </span>
                       )}
                     </div>
 
@@ -515,10 +584,14 @@ function IndicesView({
           </div>
         );
       })}
+      <button className="fab" onClick={onAddClick}>
+        + Add index
+      </button>
+
       <details className="idx-manage">
         <summary>Show / hide indices</summary>
         <div className="idx-toggles">
-          {INDICES.map((i) => (
+          {indices.map((i) => (
             <label key={i.symbol}>
               <input
                 type="checkbox"
@@ -526,6 +599,17 @@ function IndicesView({
                 onChange={() => onToggle(i.symbol)}
               />
               {i.name}
+              {i.group === "Custom" && (
+                <button
+                  className="idx-toggle-remove"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onRemoveCustom(i.symbol);
+                  }}
+                >
+                  delete
+                </button>
+              )}
             </label>
           ))}
         </div>

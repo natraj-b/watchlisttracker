@@ -6,9 +6,17 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onAdd: (symbol: string, name: string) => void;
+  title?: string;
+  placeholder?: string;
 }
 
-export function AddSymbolSheet({ open, onClose, onAdd }: Props) {
+export function AddSymbolSheet({
+  open,
+  onClose,
+  onAdd,
+  title = "Add to watchlist",
+  placeholder = "Search company or ticker (e.g. Reliance, HDFCBANK)",
+}: Props) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<
     { symbol: string; name: string; exch: string }[]
@@ -51,11 +59,11 @@ export function AddSymbolSheet({ open, onClose, onAdd }: Props) {
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
-        <h3>Add to watchlist</h3>
+        <h3>{title}</h3>
         <input
           autoFocus
           className="sheet-input"
-          placeholder="Search company or ticker (e.g. Reliance, HDFCBANK)"
+          placeholder={placeholder}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
