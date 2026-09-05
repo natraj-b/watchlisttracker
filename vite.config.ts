@@ -86,6 +86,43 @@ function yahooDevProxy(): Plugin {
   };
 }
 
+// Dev-only middleware mirroring api/nse.ts.
+function nseDevProxy(): Plugin {
+  const UA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36";
+  const ALLOWED = new Set(["allIndices"]);
+
+  return {
+    name: "nse-dev-proxy",
+    configureServer(server) {
+      server.middlewares.use("/api/nse", async (req, res) => {
+        try {
+          const u = new URL(req.url || "", "http://localhost");
+          const path = u.searchParams.get("path") || "";
+          if (!ALLOWED.has(path)) {
+            res.statusCode = 400;
+            return res.end('{"error":"path not allowed"}');
+          }
+          const r = await fetch(`https://www.nseindia.com/api/${path}`, {
+            headers: {
+              "User-Agent": UA,
+              Accept: "application/json",
+              Referer: "https://www.nseindia.com/market-data/live-equity-market",
+            },
+          }).catch(() => null);
+          res.statusCode = r?.status ?? 502;
+          res.setHeader("Content-Type", "application/json");
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.end(r ? await r.text() : '{"error":"network"}');
+        } catch (e) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: String(e) }));
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), yahooDevProxy()],
+  plugins: [react(), yahooDevProxy(), nseDevProxy()],
 });

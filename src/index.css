@@ -279,6 +279,10 @@ button { font: inherit; cursor: pointer; }
 .idxrow-drop.deep { background: rgba(255, 97, 105, 0.15); color: var(--down); }
 .idxrow-drop.na { font-weight: 500; font-style: italic; }
 
+.idxrow-ratios {
+  display: flex; gap: 10px; margin-top: 6px; font-size: 10.5px; color: var(--muted);
+}
+.idxrow-ratios b { color: var(--text); font-weight: 700; }
 .idxrow-rets { display: flex; gap: 4px; margin-top: 8px; }
 .idxrow-ret {
   flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px;

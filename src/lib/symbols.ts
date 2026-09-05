@@ -4,25 +4,28 @@ export interface IndexDef {
   symbol: string;
   name: string;
   group: "Broad" | "Sector" | "Other" | "Custom";
+  /** NSE's own index key (nseindia.com/api/allIndices "indexSymbol" field),
+   * used to look up live P/E and P/B — Yahoo doesn't provide those for indices. */
+  nseKey?: string;
 }
 
 // Yahoo Finance symbols for Indian indices. A few sector indices are not exposed
 // consistently by Yahoo; those are omitted rather than shown broken.
 export const INDICES: IndexDef[] = [
-  { symbol: "^NSEI", name: "Nifty 50", group: "Broad" },
+  { symbol: "^NSEI", name: "Nifty 50", group: "Broad", nseKey: "NIFTY 50" },
   { symbol: "^BSESN", name: "Sensex", group: "Broad" },
-  { symbol: "^NSMIDCP", name: "Nifty Midcap 100", group: "Broad" },
-  { symbol: "^CNXSC", name: "Nifty Smallcap 100", group: "Broad" },
-  { symbol: "^NSEBANK", name: "Nifty Bank", group: "Sector" },
-  { symbol: "NIFTY_FIN_SERVICE.NS", name: "Nifty Fin Services", group: "Sector" },
-  { symbol: "^CNXIT", name: "Nifty IT", group: "Sector" },
-  { symbol: "^CNXAUTO", name: "Nifty Auto", group: "Sector" },
-  { symbol: "^CNXPHARMA", name: "Nifty Pharma", group: "Sector" },
-  { symbol: "^CNXFMCG", name: "Nifty FMCG", group: "Sector" },
-  { symbol: "^CNXMETAL", name: "Nifty Metal", group: "Sector" },
-  { symbol: "^CNXENERGY", name: "Nifty Energy", group: "Sector" },
-  { symbol: "^CNXREALTY", name: "Nifty Realty", group: "Sector" },
-  { symbol: "^CNXPSUBANK", name: "Nifty PSU Bank", group: "Sector" },
+  { symbol: "^NSMIDCP", name: "Nifty Midcap 100", group: "Broad", nseKey: "NIFTY MIDCAP 100" },
+  { symbol: "^CNXSC", name: "Nifty Smallcap 100", group: "Broad", nseKey: "NIFTY SMLCAP 100" },
+  { symbol: "^NSEBANK", name: "Nifty Bank", group: "Sector", nseKey: "NIFTY BANK" },
+  { symbol: "NIFTY_FIN_SERVICE.NS", name: "Nifty Fin Services", group: "Sector", nseKey: "NIFTY FIN SERVICE" },
+  { symbol: "^CNXIT", name: "Nifty IT", group: "Sector", nseKey: "NIFTY IT" },
+  { symbol: "^CNXAUTO", name: "Nifty Auto", group: "Sector", nseKey: "NIFTY AUTO" },
+  { symbol: "^CNXPHARMA", name: "Nifty Pharma", group: "Sector", nseKey: "NIFTY PHARMA" },
+  { symbol: "^CNXFMCG", name: "Nifty FMCG", group: "Sector", nseKey: "NIFTY FMCG" },
+  { symbol: "^CNXMETAL", name: "Nifty Metal", group: "Sector", nseKey: "NIFTY METAL" },
+  { symbol: "^CNXENERGY", name: "Nifty Energy", group: "Sector", nseKey: "NIFTY ENERGY" },
+  { symbol: "^CNXREALTY", name: "Nifty Realty", group: "Sector", nseKey: "NIFTY REALTY" },
+  { symbol: "^CNXPSUBANK", name: "Nifty PSU Bank", group: "Sector", nseKey: "NIFTY PSU BANK" },
   { symbol: "^INDIAVIX", name: "India VIX", group: "Other" },
 ];
 

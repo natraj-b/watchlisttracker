@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Candle, CustomIndex, Quote, Section, WatchItem } from "../types";
 import { onStoreChange, store } from "../lib/storage";
 import { getChart, getQuotes, getQuoteSummary } from "../lib/yahoo";
+import { getIndexRatios, type IndexRatioMap } from "../lib/nse";
 import { INDICES, guessSection, type IndexDef } from "../lib/symbols";
 import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
 import { num, pct, signClass } from "../lib/format";
@@ -457,7 +458,18 @@ function IndicesView({
   onAddClick: () => void;
 }) {
   const [histories, setHistories] = useState<Record<string, Candle[]>>({});
+  const [ratios, setRatios] = useState<IndexRatioMap>({});
   const visible = indices.filter((i) => !hidden.includes(i.symbol));
+
+  useEffect(() => {
+    let cancelled = false;
+    getIndexRatios(() => {
+      getIndexRatios().then((r) => !cancelled && setRatios(r));
+    }).then((r) => !cancelled && setRatios(r));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -544,6 +556,17 @@ function IndicesView({
                         </span>
                       )}
                     </div>
+
+                    {i.nseKey && ratios[i.nseKey] && (
+                      <div className="idxrow-ratios">
+                        <span>
+                          P/E <b>{ratios[i.nseKey].pe != null ? num(ratios[i.nseKey].pe, 1) : "—"}</b>
+                        </span>
+                        <span>
+                          P/B <b>{ratios[i.nseKey].pb != null ? num(ratios[i.nseKey].pb, 2) : "—"}</b>
+                        </span>
+                      </div>
+                    )}
 
                     <div className="idxrow-rets">
                       <div className="idxrow-ret">
