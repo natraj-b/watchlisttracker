@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { store } from "../lib/storage";
+import { useEffect, useState } from "react";
+import { onStoreChange, store } from "../lib/storage";
 
 export interface ChecklistItem {
   key: string;
@@ -45,6 +45,8 @@ export function ResearchChecklist({
 }) {
   const [notes, setNotes] = useState<Record<string, string>>(() => store.getNotes());
 
+  useEffect(() => onStoreChange(() => setNotes(store.getNotes())), []);
+
   function update(k: string, v: string) {
     const key = `${symbolKey}::${k}`;
     const next = { ...notes, [key]: v };
@@ -57,7 +59,8 @@ export function ResearchChecklist({
     <div className="checklist">
       <p className="checklist-note">
         These items aren't available from any free API. Open a source, then jot
-        your finding — it's saved on this device only.
+        your finding — it's saved on this device (and synced to your other
+        devices if you've turned sync on).
       </p>
       <div className="checklist-links">
         {links.map((l) => (

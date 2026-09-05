@@ -16,7 +16,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <span className="brand">📈 Watchlist</span>
-        <span className="ver">build 3</span>
+        <span className="ver">build 4</span>
         <button
           className="header-backup"
           aria-label="Backup and restore"

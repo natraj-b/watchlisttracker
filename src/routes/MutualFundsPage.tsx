@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { MfDetail, MfScheme, MfWatchItem } from "../types";
-import { store } from "../lib/storage";
+import { onStoreChange, store } from "../lib/storage";
 import { computeReturns, getFund, searchFunds } from "../lib/mfapi";
 import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
 import { RefreshBar } from "../components/RefreshBar";
@@ -21,6 +21,8 @@ export function MutualFundsPage() {
     setFunds(n);
     store.setFunds(n);
   };
+
+  useEffect(() => onStoreChange(() => setFunds(store.getFunds())), []);
 
   const load = useCallback(async () => {
     const codes = store.getFunds().map((f) => f.schemeCode);

@@ -72,6 +72,25 @@ button { font: inherit; cursor: pointer; }
 .backup-error { color: var(--down); font-size: 12px; }
 .backup-summary { font-size: 12px; color: var(--up); }
 .backup-note { font-size: 11px; color: var(--muted); margin-top: 10px; }
+
+.sync-section h4 { margin: 0 0 8px; font-size: 13px; }
+.sync-status { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+.sync-status.ok { color: var(--up); }
+.sync-form { display: flex; gap: 6px; margin-bottom: 8px; }
+.sync-form input {
+  flex: 1; padding: 9px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;
+}
+.sync-form button {
+  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  border-radius: 8px; padding: 0 12px; font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.sync-form button:disabled { opacity: 0.6; }
+.sync-hint { font-size: 11px; color: var(--muted); margin: 0; }
+.sync-signout {
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--muted);
+  border-radius: 8px; padding: 6px 12px; font-size: 12px;
+}
 .content { flex: 1; padding-bottom: 76px; }
 
 .databanner {

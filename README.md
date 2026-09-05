@@ -42,6 +42,31 @@ site, so the deep-fundamental items are deliberately manual.
 This app is for information only. It is **not investment advice** and generates no
 buy/sell/valuation verdicts.
 
+## Cloud sync (optional)
+
+By default all data lives only in this browser's `localStorage`. To sync your
+watchlist across devices (phone + laptop), the app can optionally use a
+**Firebase** project you own — free tier, no credit card:
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
+2. **Firestore Database → Create database** (production mode, pick a nearby region)
+3. **Authentication → Sign-in method → Email/Password** → enable the
+   **Email link (passwordless sign-in)** sub-toggle → Save
+4. **Project settings → Your apps → Add app → Web** → copy the 6 config values
+5. Copy `.env.example` to `.env` and fill them in (see comments in that file);
+   for a Vercel deploy, add the same 6 keys under **Project Settings →
+   Environment Variables**
+6. **Firestore Database → Rules** → paste the contents of [`firestore.rules`](firestore.rules) → Publish
+7. **Authentication → Settings → Authorized domains** → add your live domain
+   (e.g. `your-app.vercel.app`) — `localhost` is already authorized by default
+
+Sign-in is passwordless: enter your email in the app's ⇅ **Backup, restore &
+sync** panel, click the link Firebase emails you **on each device**, and that
+device is linked. No password, no separate account system beyond Firebase's own.
+
+Leaving all 6 env vars blank runs the app exactly as before — fully local, no
+sync, nothing extra loaded.
+
 ## Run locally
 
 ```bash

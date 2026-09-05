@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Quote, Section, WatchItem } from "../types";
-import { store } from "../lib/storage";
+import { onStoreChange, store } from "../lib/storage";
 import { getChart, getQuotes, getQuoteSummary } from "../lib/yahoo";
 import { INDICES, guessSection } from "../lib/symbols";
 import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
@@ -23,6 +23,17 @@ export function WatchlistPage() {
     setItems(next);
     store.setStocks(next);
   };
+
+  // Reflect data that changed elsewhere: a Firestore sync from another device,
+  // or an Excel import.
+  useEffect(
+    () =>
+      onStoreChange(() => {
+        setItems(store.getStocks());
+        setHidden(store.getHiddenIndices());
+      }),
+    []
+  );
 
   const load = useCallback(async () => {
     const stockSyms = store.getStocks().map((i) => i.symbol);
