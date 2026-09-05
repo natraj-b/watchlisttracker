@@ -442,6 +442,59 @@ function deriveIdxStats(candles: Candle[], livePrice: number | null): IdxStats {
   };
 }
 
+type IdxSortKey = "name" | "cmp" | "drop" | "ret1y" | "ret5y" | "ret10y" | "pe" | "pb";
+
+function idxSortValue(
+  i: IndexDef,
+  key: IdxSortKey,
+  stats: IdxStats,
+  ratios: IndexRatioMap
+): number | string | null {
+  switch (key) {
+    case "name":
+      return i.name.toLowerCase();
+    case "cmp":
+      return stats.cmp;
+    case "drop":
+      return stats.dropFromAth;
+    case "ret1y":
+      return stats.ret1y;
+    case "ret5y":
+      return stats.ret5y;
+    case "ret10y":
+      return stats.ret10y;
+    case "pe":
+      return i.nseKey ? ratios[i.nseKey]?.pe ?? null : null;
+    case "pb":
+      return i.nseKey ? ratios[i.nseKey]?.pb ?? null : null;
+  }
+}
+
+function sortIndexRows(
+  rows: IndexDef[],
+  key: IdxSortKey,
+  histories: Record<string, Candle[]>,
+  quotes: Record<string, Quote>,
+  ratios: IndexRatioMap
+): IndexDef[] {
+  const withStats = rows.map((i) => ({
+    i,
+    stats: deriveIdxStats(histories[i.symbol] || [], quotes[i.symbol]?.price ?? null),
+  }));
+  withStats.sort((a, b) => {
+    const va = idxSortValue(a.i, key, a.stats, ratios);
+    const vb = idxSortValue(b.i, key, b.stats, ratios);
+    if (typeof va === "string" || typeof vb === "string") {
+      return String(va ?? "").localeCompare(String(vb ?? ""));
+    }
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    return va - vb;
+  });
+  return withStats.map((x) => x.i);
+}
+
 function IndicesView({
   indices,
   hidden,
@@ -459,6 +512,7 @@ function IndicesView({
 }) {
   const [histories, setHistories] = useState<Record<string, Candle[]>>({});
   const [ratios, setRatios] = useState<IndexRatioMap>({});
+  const [idxSort, setIdxSort] = useState<IdxSortKey>("name");
   const visible = indices.filter((i) => !hidden.includes(i.symbol));
 
   useEffect(() => {
@@ -494,21 +548,78 @@ function IndicesView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hidden]);
 
-  const groups: Array<"Broad" | "Sector" | "Other" | "Custom"> = [
-    "Broad",
-    "Sector",
-    "Other",
-    "Custom",
-  ];
+  const KNOWN_GROUPS = ["Broad", "Sector", "Other", "Custom"];
+  const [groupOrder, setGroupOrder] = useState<string[]>(() => {
+    const stored = store.getIndexGroupOrder();
+    const known = stored.filter((g) => KNOWN_GROUPS.includes(g));
+    const missing = KNOWN_GROUPS.filter((g) => !known.includes(g));
+    return [...known, ...missing];
+  });
+
+  function moveGroup(group: string, dir: -1 | 1) {
+    const idx = groupOrder.indexOf(group);
+    const swapWith = idx + dir;
+    if (swapWith < 0 || swapWith >= groupOrder.length) return;
+    const next = [...groupOrder];
+    [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
+    setGroupOrder(next);
+    store.setIndexGroupOrder(next);
+  }
+
+  const groups = groupOrder as Array<"Broad" | "Sector" | "Other" | "Custom">;
 
   return (
     <div className="idx-view">
+      <div className="listbar">
+        <span className="listbar-hint">Sort applies within each group</span>
+        <select
+          className="listbar-sort"
+          value={idxSort}
+          onChange={(e) => setIdxSort(e.target.value as IdxSortKey)}
+          aria-label="Sort indices by"
+        >
+          <option value="name">Sort: Name</option>
+          <option value="cmp">Sort: CMP</option>
+          <option value="drop">Sort: Drop from ATH</option>
+          <option value="ret1y">Sort: 1Y return</option>
+          <option value="ret5y">Sort: 5Y return</option>
+          <option value="ret10y">Sort: 10Y return</option>
+          <option value="pe">Sort: P/E</option>
+          <option value="pb">Sort: P/B</option>
+        </select>
+      </div>
+
       {groups.map((g) => {
-        const rows = visible.filter((i) => i.group === g);
+        const rows = sortIndexRows(
+          visible.filter((i) => i.group === g),
+          idxSort,
+          histories,
+          quotes,
+          ratios
+        );
         if (!rows.length) return null;
+        const orderIdx = groupOrder.indexOf(g);
         return (
           <div key={g}>
-            <h3 className="idx-group">{g}</h3>
+            <div className="idx-group-head">
+              <h3 className="idx-group">{g}</h3>
+              <div className="idx-group-move">
+                <button
+                  disabled={orderIdx === 0}
+                  aria-label={`Move ${g} up`}
+                  onClick={() => moveGroup(g, -1)}
+                >
+                  ▲
+                </button>
+                <button
+                  disabled={orderIdx === groupOrder.length - 1}
+                  aria-label={`Move ${g} down`}
+                  onClick={() => moveGroup(g, 1)}
+                >
+                  ▼
+                </button>
+              </div>
+            </div>
             <div className="idx-cards">
               {rows.map((i) => {
                 const stats = deriveIdxStats(

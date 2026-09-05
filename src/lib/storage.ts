@@ -5,6 +5,7 @@ const KEYS = {
   funds: "iw.watchlist.funds.v1",
   hiddenIndices: "iw.indices.hidden.v1",
   customIndices: "iw.indices.custom.v1",
+  indexGroupOrder: "iw.indices.grouporder.v1",
   notes: "iw.analyse.notes.v1",
   settings: "iw.settings.v1",
 };
@@ -50,6 +51,7 @@ export interface CloudDoc {
   funds?: MfWatchItem[];
   hiddenIndices?: string[];
   customIndices?: CustomIndex[];
+  indexGroupOrder?: string[];
   notes?: Record<string, string>;
 }
 
@@ -90,6 +92,14 @@ export const store = {
     cloudPush?.({ customIndices: v });
   },
 
+  getIndexGroupOrder: (): string[] =>
+    read<string[]>(KEYS.indexGroupOrder, ["Broad", "Sector", "Other", "Custom"]),
+  setIndexGroupOrder: (v: string[]) => {
+    write(KEYS.indexGroupOrder, v);
+    emit();
+    cloudPush?.({ indexGroupOrder: v });
+  },
+
   getNotes: (): Record<string, string> => read(KEYS.notes, {}),
   setNotes: (v: Record<string, string>) => {
     write(KEYS.notes, v);
@@ -107,6 +117,7 @@ export const store = {
     funds: read<MfWatchItem[]>(KEYS.funds, []),
     hiddenIndices: read<string[]>(KEYS.hiddenIndices, []),
     customIndices: read<CustomIndex[]>(KEYS.customIndices, []),
+    indexGroupOrder: read<string[]>(KEYS.indexGroupOrder, ["Broad", "Sector", "Other", "Custom"]),
     notes: read(KEYS.notes, {}),
   }),
 
@@ -116,6 +127,7 @@ export const store = {
     if (patch.funds !== undefined) write(KEYS.funds, patch.funds);
     if (patch.hiddenIndices !== undefined) write(KEYS.hiddenIndices, patch.hiddenIndices);
     if (patch.customIndices !== undefined) write(KEYS.customIndices, patch.customIndices);
+    if (patch.indexGroupOrder !== undefined) write(KEYS.indexGroupOrder, patch.indexGroupOrder);
     if (patch.notes !== undefined) write(KEYS.notes, patch.notes);
     emit();
   },

@@ -150,6 +150,7 @@ button { font: inherit; cursor: pointer; }
   margin-left: auto; padding: 6px 10px; border: 1px solid var(--border);
   background: var(--surface); color: var(--text); border-radius: 8px; font-size: 12px;
 }
+.listbar-hint { font-size: 11px; color: var(--muted); }
 .sector-group { margin-bottom: 4px; }
 .sector-group + .sector-group { margin-top: 14px; }
 .sector-heading {
@@ -245,7 +246,17 @@ button { font: inherit; cursor: pointer; }
 
 /* indices */
 .idx-view { display: flex; flex-direction: column; gap: 4px; }
-.idx-group { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 16px 2px 8px; }
+.idx-group { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 0; }
+.idx-group-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 16px 2px 8px;
+}
+.idx-group-move { display: flex; gap: 4px; }
+.idx-group-move button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 6px; width: 22px; height: 20px; font-size: 9px; line-height: 1;
+}
+.idx-group-move button:disabled { opacity: 0.3; }
 .idx-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
 
 .idxrow {
