@@ -11,6 +11,9 @@ your device (`localStorage`) — no accounts, no server database.
   - **Financial** — shows CMP, day %, P/B, 52W range
   - **Indices** — Nifty 50, Sensex, Bank Nifty, Nifty IT, and other sector indices
     with a 1-month sparkline
+- **Today's Pick** — ranks your own watchlist by valuation only: non-financials with
+  P/E ≤ 25 and financials with P/B ≤ 2, cheapest first, with CMP alongside. Not a
+  buy signal — a low multiple can also mean the market sees real risk.
 - **Mutual fund screener** — search any Indian scheme, track NAV and 1M/6M/1Y/3Y/5Y
   returns (computed from NAV history), sort by any period
 - **Analyse screen** (stock or fund) — live price + chart, valuation & ratios from
@@ -19,12 +22,22 @@ your device (`localStorage`) — no accounts, no server database.
   that saves on-device
 - **Auto-refresh** — every time you open the app or return to the tab it shows
   cached values instantly and refreshes in the background. Quote TTL is 60s during
-  NSE hours (09:15–15:30 IST, Mon–Fri), 15m otherwise.
+  NSE hours (09:15–15:30 IST, Mon–Fri), 15m otherwise. If a background refresh
+  fails, the header flags the data as stale (`⚠ Updated …`) instead of passing old
+  numbers off as live.
+- **Installable & works offline (PWA)** — a service worker precaches the app shell
+  and runtime-caches API responses (`NetworkFirst`), so the app opens instantly,
+  survives a flaky connection, and shows last-known prices with no network at all.
+  "Add to Home Screen" installs it as a standalone app with its own icon. New
+  deploys update automatically on the next visit.
 - **Backup & restore (⇅ button, top-right)** — since data lives only in this
   device's browser, "Export as Excel" downloads a `.xlsx` with your stocks, funds,
   and research notes. "Import from Excel" restores it (Merge adds/updates on top
   of what's already there; Replace wipes and reloads from the file). Use this to
   move your watchlist to another device/browser or keep a backup.
+- **Resilient** — a render error on one screen shows a recovery card (reload, or
+  clear the cached price data) instead of a blank page; your watchlist is stored
+  separately and is never touched.
 
 ## Data sources & honest limits
 
@@ -34,6 +47,7 @@ your device (`localStorage`) — no accounts, no server database.
 | Some ratios (ROE, D/E, margins, PEG, EV/EBITDA) | Yahoo `quoteSummary` | availability varies by symbol |
 | Historical prices / NAV charts | Yahoo / mfapi.in | |
 | MF NAV & returns | [mfapi.in](https://www.mfapi.in) (AMFI data) | free, no key, CORS-friendly |
+| Offline fallback for all of the above | service-worker `NetworkFirst` cache | last successful response, up to 24h old |
 | 5-yr CAGRs, promoter holding/pledging, FII/DII, moat, earnings-call notes, governance, peer tables, sector-avg valuation | **none — not available from any free API** | the Analyse screen deep-links you to the source and lets you record your own finding |
 
 NSE/BSE and Screener/Tickertape have no public API and block scraping from a hosted
@@ -75,7 +89,16 @@ npm run dev
 ```
 
 Open http://localhost:5173. In dev, Vite proxies `/api/yahoo` straight to Yahoo
-(server-to-server, no CORS issue), so the serverless function isn't needed.
+(server-to-server, no CORS issue), so the serverless function isn't needed. The
+service worker is **disabled in dev** — it only builds for production, so `npm run
+dev` never serves stale assets.
+
+App icons live in `public/pwa-*.png` / `public/apple-touch-icon.png` and are
+generated (no image tooling needed) by:
+
+```bash
+npm run icons   # regenerate after editing scripts/gen-icons.mjs
+```
 
 To test the real serverless proxy:
 
@@ -96,8 +119,9 @@ vercel dev
 4. ~1 min later you get a live `https://<name>.vercel.app` URL
 
 No environment variables. `api/yahoo.ts` deploys automatically as a serverless
-function. Every `git push` to `main` redeploys. Open the URL on your phone and
-"Add to Home Screen" for a PWA-style app.
+function. Every `git push` to `main` redeploys — the service worker picks up the
+new build on the next visit. Open the URL on your phone and "Add to Home Screen"
+to install it as a standalone PWA (works offline with last-known data).
 
 **Or via CLI:**
 
@@ -119,7 +143,15 @@ Edit `src/lib/symbols.ts` → `INDICES`. Use the Yahoo symbol (check it resolves
 
 ```
 api/yahoo.ts            serverless proxy (CORS + path whitelist)
-src/lib/                 yahoo, mfapi, cache (SWR), storage, symbols, format
-src/components/          rows, cards, chart, sparkline, sheets, checklist
+api/nse.ts              serverless proxy for NSE index P/E & P/B
+scripts/gen-icons.mjs   zero-dependency PNG generator for the PWA icons
+vite.config.ts          dev proxies + vite-plugin-pwa (service worker / manifest)
+src/lib/                 yahoo, mfapi, cache (SWR), storage, symbols, format, firebase
+src/components/          rows, cards, chart, sparkline, sheets, checklist,
+                        ErrorBoundary, Skeleton, RecommendationLadder
 src/routes/              Watchlist, MutualFunds, Analyse (stock / fund)
 ```
+
+The Analyse/Funds screens and the Firebase SDK are code-split, so the first load
+is just the watchlist. Quotes are cached per symbol, so adding or removing one
+stock doesn't refetch the rest.
