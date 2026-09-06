@@ -90,6 +90,10 @@ export function AnalyseStockPage() {
         </Link>
       </div>
 
+      <Link to={`/analyse/stock/${encodeURIComponent(sym)}/report`} className="report-cta">
+        📊 Full fundamental report — valuation, growth, health, returns &amp; a view
+      </Link>
+
       <PriceChart candles={candles} range={range} onRange={setRange} />
 
       <section>
