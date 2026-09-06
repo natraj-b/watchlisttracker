@@ -20,6 +20,17 @@ your device (`localStorage`) — no accounts, no server database.
   Yahoo, plus a deep-research checklist (the 23-point framework) with one-tap links
   to Screener / Tickertape / Moneycontrol / NSE / BSE and a notes field per item
   that saves on-device
+- **Fundamental report** (stock, from the Analyse screen) — an 8-tab auto-generated
+  report: Snapshot · Valuation · Growth · Health · Returns · Peers · Ownership ·
+  View. Pulls ~4 fiscal years from Yahoo's `fundamentals-timeseries` feed and
+  computes revenue/profit/EPS CAGR, margin trends, D/E, interest cover, current
+  ratio, free cash flow, ROE/ROCE — each with a plain-English SAFE/WATCH/RISK-style
+  signal — then benchmarks P/E and P/B against the stock's NSE **sector index**.
+  The **View** tab combines it into STRONG / MODERATE / WEAK with strengths, watch
+  points, and a mechanical (CAGR-extrapolated, clearly-labelled) forward scenario
+  table. Every unavailable metric is flagged `🚩 DATA UNAVAILABLE`; a data-confidence
+  bar (live checks / 12) sits at the top. Peers and ownership have no free source
+  and deep-link out. Not advice — a VIEW; the decision is yours.
 - **Auto-refresh** — every time you open the app or return to the tab it shows
   cached values instantly and refreshes in the background. Quote TTL is 60s during
   NSE hours (09:15–15:30 IST, Mon–Fri), 15m otherwise. If a background refresh
@@ -45,6 +56,8 @@ your device (`localStorage`) — no accounts, no server database.
 |---|---|---|
 | Price, P/E, Fwd P/E, P/B, market cap, 52W, EPS, index levels | Yahoo Finance (unofficial) via `api/yahoo.ts` proxy | needs the serverless proxy for CORS |
 | Some ratios (ROE, D/E, margins, PEG, EV/EBITDA) | Yahoo `quoteSummary` | availability varies by symbol |
+| ~4yr statement history (revenue, net income, EPS, EBIT/EBITDA, debt, equity, assets, cash flow) for the Fundamental report | Yahoo `fundamentals-timeseries` via the same proxy | `quoteSummary`'s `*History` modules are largely empty now; this feed still works. Caps at ~4 fiscal years on the free tier |
+| Sector-average P/E & P/B (report benchmark) | NSE `allIndices` via `api/nse.ts` | maps the stock's Yahoo sector → a Nifty sector index; rough for conglomerates |
 | Historical prices / NAV charts | Yahoo / mfapi.in | |
 | MF NAV & returns | [mfapi.in](https://www.mfapi.in) (AMFI data) | free, no key, CORS-friendly |
 | Offline fallback for all of the above | service-worker `NetworkFirst` cache | last successful response, up to 24h old |
@@ -149,7 +162,8 @@ vite.config.ts          dev proxies + vite-plugin-pwa (service worker / manifest
 src/lib/                 yahoo, mfapi, cache (SWR), storage, symbols, format, firebase
 src/components/          rows, cards, chart, sparkline, sheets, checklist,
                         ErrorBoundary, Skeleton, RecommendationLadder
-src/routes/              Watchlist, MutualFunds, Analyse (stock / fund)
+src/routes/              Watchlist, MutualFunds, Analyse (stock / fund), StockReport
+src/lib/fundamentals.ts  builds the 8-tab Fundamental report (Yahoo + NSE → signals)
 ```
 
 The Analyse/Funds screens and the Firebase SDK are code-split, so the first load

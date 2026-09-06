@@ -18,6 +18,9 @@ const AnalyseStockPage = lazy(() =>
 const AnalyseFundPage = lazy(() =>
   import("./routes/AnalyseFundPage").then((m) => ({ default: m.AnalyseFundPage }))
 );
+const StockReportPage = lazy(() =>
+  import("./routes/StockReportPage").then((m) => ({ default: m.StockReportPage }))
+);
 const DataBackupSheet = lazy(() =>
   import("./components/DataBackupSheet").then((m) => ({ default: m.DataBackupSheet }))
 );
@@ -80,6 +83,7 @@ export default function App() {
               <Route path="/" element={<WatchlistPage />} />
               <Route path="/funds" element={<MutualFundsPage />} />
               <Route path="/analyse/stock/:symbol" element={<AnalyseStockPage />} />
+              <Route path="/analyse/stock/:symbol/report" element={<StockReportPage />} />
               <Route path="/analyse/fund/:code" element={<AnalyseFundPage />} />
               <Route path="*" element={<WatchlistPage />} />
             </Routes>

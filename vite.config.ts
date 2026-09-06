@@ -29,9 +29,10 @@ function yahooDevProxy(): Plugin {
     "/v7/finance/quote",
     "/v10/finance/quoteSummary/",
     "/v1/finance/search",
+    "/ws/fundamentals-timeseries/",
   ];
   const NEEDS_CRUMB =
-    /^\/(v7\/finance\/quote|v10\/finance\/quoteSummary|v1\/finance\/search)/;
+    /^\/(v7\/finance\/quote|v10\/finance\/quoteSummary|v1\/finance\/search|ws\/fundamentals-timeseries)/;
   let cookie: string | null = null;
   let crumb: string | null = null;
 
