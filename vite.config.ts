@@ -1,5 +1,18 @@
+import { execSync } from "node:child_process";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
+
+// Build identifier shown in the header — derived from git so it can't go stale.
+function gitInfo() {
+  try {
+    const count = execSync("git rev-list --count HEAD").toString().trim();
+    const sha = execSync("git rev-parse --short HEAD").toString().trim();
+    return { build: count, commit: sha };
+  } catch {
+    return { build: "dev", commit: "local" };
+  }
+}
 
 // Dev-only middleware mirroring api/yahoo.ts so `npm run dev` needs no Vercel.
 // Kept as its own small copy so api/yahoo.ts can stay import-free (simpler
@@ -123,6 +136,74 @@ function nseDevProxy(): Plugin {
   };
 }
 
+const { build, commit } = gitInfo();
+
 export default defineConfig({
-  plugins: [react(), yahooDevProxy(), nseDevProxy()],
+  define: {
+    __BUILD__: JSON.stringify(build),
+    __COMMIT__: JSON.stringify(commit),
+  },
+  plugins: [
+    react(),
+    yahooDevProxy(),
+    nseDevProxy(),
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["apple-touch-icon.png"],
+      // Service worker is a production-only concern; `npm run dev` keeps using
+      // the plain dev proxies with no SW interception.
+      devOptions: { enabled: false },
+      manifest: {
+        name: "Investment Watchlist",
+        short_name: "Watchlist",
+        description:
+          "Watch Indian stocks & mutual funds, with a Screener-style analysis view for any of them.",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#0b0d10",
+        theme_color: "#0b0d10",
+        icons: [
+          { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
+          {
+            src: "pwa-maskable-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+        ],
+      },
+      workbox: {
+        clientsClaim: true,
+        skipWaiting: true,
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [
+          {
+            // Our own serverless proxies (Yahoo quotes / NSE index ratios):
+            // serve fresh when online, fall back to the last response offline.
+            urlPattern: ({ url }) => url.pathname.startsWith("/api/"),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api",
+              networkTimeoutSeconds: 6,
+              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: ({ url }) => url.hostname === "api.mfapi.in",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "mfapi",
+              networkTimeoutSeconds: 6,
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+    }),
+  ],
 });

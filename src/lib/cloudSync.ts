@@ -1,6 +1,6 @@
 import type { Auth } from "firebase/auth";
 import type { Firestore } from "firebase/firestore";
-import { cloudSyncConfigured, firebaseApp } from "./firebase";
+import { cloudSyncConfigured, getFirebaseApp } from "./firebase";
 import { setCloudPushHandler, store, type CloudDoc } from "./storage";
 
 const PENDING_EMAIL_KEY = "iw.pendingSignInEmail";
@@ -43,14 +43,16 @@ let applyingRemote = false;
 let started = false;
 
 async function ready(): Promise<{ auth: Auth; db: Firestore } | null> {
-  if (!cloudSyncConfigured || !firebaseApp) return null;
+  const appPromise = getFirebaseApp();
+  if (!appPromise) return null;
   if (auth && db) return { auth, db };
-  const [{ getAuth }, { getFirestore }] = await Promise.all([
+  const [app, { getAuth }, { getFirestore }] = await Promise.all([
+    appPromise,
     import("firebase/auth"),
     import("firebase/firestore"),
   ]);
-  auth = getAuth(firebaseApp);
-  db = getFirestore(firebaseApp);
+  auth = getAuth(app);
+  db = getFirestore(app);
   return { auth, db };
 }
 

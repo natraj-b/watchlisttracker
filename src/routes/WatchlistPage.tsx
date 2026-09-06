@@ -12,10 +12,18 @@ import { Sparkline } from "../components/Sparkline";
 import { MetricGrid } from "../components/MetricGrid";
 import { AddSymbolSheet } from "../components/AddSymbolSheet";
 import { RecommendationLadder, type LadderRow } from "../components/RecommendationLadder";
+import { SkeletonRows } from "../components/Skeleton";
 
 type Tab = Section | "idx" | "picks";
 type ViewMode = "flat" | "sector";
 type SortKey = "name" | "cmp" | "chg" | "metric";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "picks", label: "Today's Pick" },
+  { key: "nonfin", label: "Non-financial" },
+  { key: "fin", label: "Financial" },
+  { key: "idx", label: "Indices" },
+];
 
 function sortValue(it: WatchItem, key: SortKey, tab: Tab, quotes: Record<string, Quote>) {
   const q = quotes[it.symbol];
@@ -210,6 +218,9 @@ export function WatchlistPage() {
   }
 
   const list = items.filter((i) => i.section === tab);
+  // First paint after a cold load: watchlist items are known (from localStorage)
+  // but no quote has arrived yet. Show skeletons rather than "nothing here".
+  const firstLoad = fetchedAt == null && Object.keys(quotes).length === 0;
 
   function renderRow(it: WatchItem) {
     return (
@@ -237,23 +248,37 @@ export function WatchlistPage() {
     <div className="page">
       <RefreshBar fetchedAt={fetchedAt} busy={busy} onRefresh={refresh} />
 
-      <div className="tabs">
-        <button className={tab === "picks" ? "on" : ""} onClick={() => setTab("picks")}>
-          Today's Pick
-        </button>
-        <button className={tab === "nonfin" ? "on" : ""} onClick={() => setTab("nonfin")}>
-          Non-financial
-        </button>
-        <button className={tab === "fin" ? "on" : ""} onClick={() => setTab("fin")}>
-          Financial
-        </button>
-        <button className={tab === "idx" ? "on" : ""} onClick={() => setTab("idx")}>
-          Indices
-        </button>
+      <div
+        className="tabs"
+        role="tablist"
+        aria-label="Watchlist sections"
+        onKeyDown={(e) => {
+          const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+          if (!dir) return;
+          e.preventDefault();
+          const i = TABS.findIndex((t) => t.key === tab);
+          setTab(TABS[(i + dir + TABS.length) % TABS.length].key);
+        }}
+      >
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            id={`tab-${t.key}`}
+            aria-selected={tab === t.key}
+            aria-controls="tabpanel"
+            tabIndex={tab === t.key ? 0 : -1}
+            className={tab === t.key ? "on" : ""}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
+      <div id="tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
       {tab === "picks" ? (
-        <TodaysPickView items={items} quotes={quotes} />
+        <TodaysPickView items={items} quotes={quotes} loading={firstLoad} />
       ) : tab === "idx" ? (
         <IndicesView
           indices={allIndices}
@@ -266,14 +291,16 @@ export function WatchlistPage() {
       ) : (
         <>
           <div className="listbar">
-            <div className="listbar-views">
+            <div className="listbar-views" role="group" aria-label="Layout">
               <button
+                aria-pressed={viewMode === "flat"}
                 className={viewMode === "flat" ? "on" : ""}
                 onClick={() => setViewMode("flat")}
               >
                 Normal
               </button>
               <button
+                aria-pressed={viewMode === "sector"}
                 className={viewMode === "sector" ? "on" : ""}
                 onClick={() => setViewMode("sector")}
               >
@@ -293,31 +320,36 @@ export function WatchlistPage() {
             </select>
           </div>
 
-          <div className="list">
-            {list.length === 0 && (
-              <div className="empty">
-                No {tab === "fin" ? "financial" : "non-financial"} stocks yet.
-              </div>
-            )}
-            {list.length > 0 &&
-              (viewMode === "sector" ? (
-                groupBySector(list).map(([sectorName, sectorItems]) => (
-                  <div key={sectorName} className="sector-group">
-                    <h4 className="sector-heading">{sectorName}</h4>
-                    {sortItems(sectorItems, sortKey, tab, quotes).map((it) =>
-                      renderRow(it)
-                    )}
-                  </div>
-                ))
-              ) : (
-                sortItems(list, sortKey, tab, quotes).map((it) => renderRow(it))
-              ))}
-          </div>
+          {list.length > 0 && firstLoad ? (
+            <SkeletonRows count={Math.min(list.length, 6)} />
+          ) : (
+            <div className="list">
+              {list.length === 0 && (
+                <div className="empty">
+                  No {tab === "fin" ? "financial" : "non-financial"} stocks yet.
+                </div>
+              )}
+              {list.length > 0 &&
+                (viewMode === "sector" ? (
+                  groupBySector(list).map(([sectorName, sectorItems]) => (
+                    <div key={sectorName} className="sector-group">
+                      <h4 className="sector-heading">{sectorName}</h4>
+                      {sortItems(sectorItems, sortKey, tab, quotes).map((it) =>
+                        renderRow(it)
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  sortItems(list, sortKey, tab, quotes).map((it) => renderRow(it))
+                ))}
+            </div>
+          )}
           <button className="fab" onClick={() => setSheet(true)}>
             + Add stock
           </button>
         </>
       )}
+      </div>
 
       <AddSymbolSheet open={sheet} onClose={() => setSheet(false)} onAdd={addStock} />
       <AddSymbolSheet
@@ -334,9 +366,11 @@ export function WatchlistPage() {
 function TodaysPickView({
   items,
   quotes,
+  loading,
 }: {
   items: WatchItem[];
   quotes: Record<string, Quote>;
+  loading?: boolean;
 }) {
   const peRows: LadderRow[] = items
     .filter((it) => it.section === "nonfin")
@@ -369,22 +403,28 @@ function TodaysPickView({
         buy recommendation; low P/E or P/B can also mean the market sees real
         risk. Always check why before acting.
       </p>
-      <RecommendationLadder
-        title="Non-financial · P/E ≤ 25"
-        metricLabel="P/E"
-        rows={peRows}
-        greenMax={20}
-        orangeMax={25}
-        emptyText="No non-financial stock in your watchlist has a P/E of 25 or below right now."
-      />
-      <RecommendationLadder
-        title="Financial · P/B ≤ 2"
-        metricLabel="P/B"
-        rows={pbRows}
-        greenMax={1}
-        orangeMax={2}
-        emptyText="No financial stock in your watchlist has a P/B of 2 or below right now."
-      />
+      {loading ? (
+        <SkeletonRows count={5} />
+      ) : (
+        <>
+          <RecommendationLadder
+            title="Non-financial · P/E ≤ 25"
+            metricLabel="P/E"
+            rows={peRows}
+            greenMax={20}
+            orangeMax={25}
+            emptyText="No non-financial stock in your watchlist has a P/E of 25 or below right now."
+          />
+          <RecommendationLadder
+            title="Financial · P/B ≤ 2"
+            metricLabel="P/B"
+            rows={pbRows}
+            greenMax={1}
+            orangeMax={2}
+            emptyText="No financial stock in your watchlist has a P/B of 2 or below right now."
+          />
+        </>
+      )}
     </div>
   );
 }

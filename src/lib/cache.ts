@@ -25,6 +25,28 @@ function lsSet<T>(key: string, v: T): void {
   }
 }
 
+/** Read a raw cache entry (value + write time) by logical key. */
+export function cacheGet<T>(key: string): Entry<T> | null {
+  return lsGet<T>("iw.cache." + key);
+}
+
+/** Write a raw cache entry by logical key. */
+export function cacheSet<T>(key: string, v: T): void {
+  lsSet("iw.cache." + key, v);
+}
+
+/** Share one in-flight promise across concurrent callers for the same key. */
+export function dedupe<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const k = "iw.dedupe." + key;
+  if (!inflight.has(k)) {
+    inflight.set(
+      k,
+      fn().finally(() => inflight.delete(k))
+    );
+  }
+  return inflight.get(k) as Promise<T>;
+}
+
 export interface SwrResult<T> {
   data: T | null;
   fetchedAt: number | null;

@@ -1,5 +1,5 @@
 import type { Candle, Quote } from "../types";
-import { swr, quoteTtl } from "./cache";
+import { swr, quoteTtl, cacheGet, cacheSet, dedupe } from "./cache";
 import { setDataError } from "./status";
 
 const BASE = "/api/yahoo";
@@ -65,20 +65,59 @@ async function fetchQuotes(symbols: string[]): Promise<Record<string, Quote>> {
   return out;
 }
 
-// One cached, de-duplicated batch call for a set of symbols.
+const quoteKey = (symbol: string) => "quote." + symbol;
+
+// Quotes are cached per symbol, so adding or removing one watchlist entry
+// doesn't invalidate the rest. Returns whatever is cached immediately; any
+// symbols that are missing or past their TTL are refreshed in one batch call,
+// after which `onRefresh` fires so the caller can re-read.
 export async function getQuotes(
   symbols: string[],
   onRefresh?: () => void
 ): Promise<{ quotes: Record<string, Quote>; oldestAt: number | null }> {
   if (symbols.length === 0) return { quotes: {}, oldestAt: null };
-  const key = "quotes." + [...symbols].sort().join(",");
-  const res = await swr<Record<string, Quote>>(
-    key,
-    quoteTtl(),
-    () => fetchQuotes(symbols),
-    onRefresh
-  );
-  return { quotes: res.data ?? {}, oldestAt: res.fetchedAt };
+
+  const ttl = quoteTtl();
+  const now = Date.now();
+  const out: Record<string, Quote> = {};
+  let oldestAt: number | null = null;
+  const missing: string[] = [];
+  const stale: string[] = [];
+
+  for (const sym of symbols) {
+    const entry = cacheGet<Quote>(quoteKey(sym));
+    if (entry) {
+      out[sym] = entry.v;
+      oldestAt = oldestAt == null ? entry.at : Math.min(oldestAt, entry.at);
+      if (now - entry.at >= ttl) stale.push(sym);
+    } else {
+      missing.push(sym);
+    }
+  }
+
+  const toFetch = [...missing, ...stale];
+  if (toFetch.length === 0) return { quotes: out, oldestAt };
+
+  const batchKey = "quotes." + [...toFetch].sort().join(",");
+  const fetchP = dedupe(batchKey, () => fetchQuotes(toFetch)).then((fetched) => {
+    const at = Date.now();
+    for (const sym of toFetch) {
+      if (fetched[sym]) cacheSet(quoteKey(sym), fetched[sym]);
+    }
+    return { fetched, at };
+  });
+
+  // Only block if we'd otherwise have nothing to show for some symbol.
+  if (missing.length > 0) {
+    const { fetched, at } = await fetchP;
+    for (const sym of symbols) if (fetched[sym]) out[sym] = fetched[sym];
+    oldestAt = oldestAt == null ? at : Math.min(oldestAt, at);
+    onRefresh?.();
+  } else {
+    fetchP.then(() => onRefresh?.()).catch(() => onRefresh?.());
+  }
+
+  return { quotes: out, oldestAt };
 }
 
 /* ------------------------- historical chart ------------------------ */

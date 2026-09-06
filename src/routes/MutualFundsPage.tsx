@@ -72,11 +72,12 @@ export function MutualFundsPage() {
     <div className="page">
       <RefreshBar fetchedAt={fetchedAt} busy={busy} onRefresh={refresh} />
 
-      <div className="mf-sortbar">
+      <div className="mf-sortbar" role="group" aria-label="Sort by return period">
         <span>Sort by return:</span>
         {PERIODS.map((p) => (
           <button
             key={p}
+            aria-pressed={sortBy === p}
             className={"chip " + (sortBy === p ? "on" : "")}
             onClick={() => setSortBy(p)}
           >

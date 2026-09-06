@@ -1,4 +1,8 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/client" />
+
+declare const __BUILD__: string;
+declare const __COMMIT__: string;
 
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_API_KEY?: string;
