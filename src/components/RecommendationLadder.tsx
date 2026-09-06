@@ -5,6 +5,7 @@ export interface LadderRow {
   symbol: string;
   name: string;
   value: number;
+  price: number | null;
 }
 
 interface Props {
@@ -50,6 +51,10 @@ export function RecommendationLadder({
                 <span className="ladder-id">
                   <span className="ladder-sym">{bare}</span>
                   <span className="ladder-name">{r.name}</span>
+                </span>
+                <span className="ladder-cmp">
+                  {r.price == null ? "—" : "₹" + num(r.price)}
+                  <small>CMP</small>
                 </span>
                 <span className="ladder-val">
                   {num(r.value)}

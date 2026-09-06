@@ -343,14 +343,24 @@ function TodaysPickView({
     .map((it) => ({ it, pe: quotes[it.symbol]?.peTrailing ?? null }))
     .filter((x): x is { it: WatchItem; pe: number } => x.pe != null && x.pe > 0 && x.pe <= 25)
     .sort((a, b) => a.pe - b.pe)
-    .map((x) => ({ symbol: x.it.symbol, name: quotes[x.it.symbol]?.name || x.it.name, value: x.pe }));
+    .map((x) => ({
+      symbol: x.it.symbol,
+      name: quotes[x.it.symbol]?.name || x.it.name,
+      value: x.pe,
+      price: quotes[x.it.symbol]?.price ?? null,
+    }));
 
   const pbRows: LadderRow[] = items
     .filter((it) => it.section === "fin")
     .map((it) => ({ it, pb: quotes[it.symbol]?.priceToBook ?? null }))
     .filter((x): x is { it: WatchItem; pb: number } => x.pb != null && x.pb > 0 && x.pb <= 2)
     .sort((a, b) => a.pb - b.pb)
-    .map((x) => ({ symbol: x.it.symbol, name: quotes[x.it.symbol]?.name || x.it.name, value: x.pb }));
+    .map((x) => ({
+      symbol: x.it.symbol,
+      name: quotes[x.it.symbol]?.name || x.it.name,
+      value: x.pb,
+      price: quotes[x.it.symbol]?.price ?? null,
+    }));
 
   return (
     <div className="picks-view">

@@ -229,7 +229,7 @@ button { font: inherit; cursor: pointer; }
 .ladder-title { font-size: 13px; margin: 0 2px 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
 .ladder-list { display: flex; flex-direction: column; gap: 6px; }
 .ladder-row {
-  display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px;
+  display: grid; grid-template-columns: 24px 1fr auto auto; align-items: center; gap: 10px;
   background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border);
   border-radius: 10px; padding: 10px 12px;
 }
@@ -239,6 +239,8 @@ button { font: inherit; cursor: pointer; }
 .ladder-id { display: flex; flex-direction: column; min-width: 0; }
 .ladder-sym { font-weight: 700; font-size: 13px; }
 .ladder-name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ladder-cmp { font-weight: 600; font-size: 13px; display: flex; flex-direction: column; align-items: flex-end; color: var(--text); }
+.ladder-cmp small { font-weight: 400; font-size: 10px; color: var(--muted); }
 .ladder-val { font-weight: 700; font-size: 14px; display: flex; flex-direction: column; align-items: flex-end; }
 .ladder-val small { font-weight: 400; font-size: 10px; color: var(--muted); }
 .ladder-row.green .ladder-val { color: var(--up); }
