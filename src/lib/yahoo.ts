@@ -211,6 +211,51 @@ export async function getFinancials(
   return { data: res.data ?? null, fetchedAt: res.fetchedAt };
 }
 
+export interface AthInfo {
+  ath: number;
+  athT: number; // epoch seconds of the peak close
+  since: number; // epoch seconds of the first data point we got
+}
+
+// All-time high from the full weekly close history. Only the peak is cached (not
+// the whole series) so ~20 indices don't eat the localStorage quota. Closing
+// basis — an intraday spike can sit slightly above it.
+//
+// Uses period1=0 rather than range=max: for long histories Yahoo silently turns
+// range=max into QUARTERLY bars, which misses real peaks (Hang Seng's 33,154 in
+// Jan 2018 came back as 30,845). An explicit period keeps weekly resolution.
+export async function getAth(
+  symbol: string,
+  onRefresh?: () => void
+): Promise<AthInfo | null> {
+  const res = await swr<AthInfo | null>(
+    `ath2.${symbol}`,
+    6 * 60 * 60_000,
+    async () => {
+      const data = await getJson<any>(
+        api(`/v8/finance/chart/${encodeURIComponent(symbol)}`, {
+          period1: "0",
+          period2: String(Math.floor(Date.now() / 1000)),
+          interval: "1wk",
+        })
+      );
+      const r = data?.chart?.result?.[0];
+      const ts: number[] = r?.timestamp ?? [];
+      const cl: (number | null)[] = r?.indicators?.quote?.[0]?.close ?? [];
+      const pts = ts
+        .map((t, i) => ({ t, c: cl[i] }))
+        .filter((p): p is { t: number; c: number } => p.c != null);
+      // Some symbols (e.g. Nifty Smallcap 100) have a single point — no real history.
+      if (pts.length < 10) return null;
+      let peak = pts[0];
+      for (const p of pts) if (p.c > peak.c) peak = p;
+      return { ath: peak.c, athT: peak.t, since: pts[0].t };
+    },
+    onRefresh
+  );
+  return res.data ?? null;
+}
+
 // Yahoo's fundamentals-timeseries endpoint — the currently-working source for
 // multi-year statement data (quoteSummary's *History modules are largely gutted
 // now). Returns ~4 fiscal years. Cached 12h (SWR).

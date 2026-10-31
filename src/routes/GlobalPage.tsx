@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Quote } from "../types";
-import { getChart, getQuotes } from "../lib/yahoo";
+import { getAth, getChart, getQuotes, type AthInfo } from "../lib/yahoo";
 import { getIndexRatios, type IndexRatioMap } from "../lib/nse";
-import { GLOBAL, GLOBAL_GROUPS, INDIA_SIGNALS, globalDef, type GlobalDef } from "../lib/global";
+import {
+  GLOBAL,
+  GLOBAL_GROUPS,
+  INDIA_SIGNALS,
+  QUOTE_SYMBOLS,
+  globalDef,
+  type GlobalDef,
+} from "../lib/global";
 import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
 import { num, pct, signClass } from "../lib/format";
 import { RefreshBar } from "../components/RefreshBar";
@@ -33,6 +40,8 @@ export function GlobalPage() {
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [trends, setTrends] = useState<Record<string, number[]>>({});
   const [ratios, setRatios] = useState<IndexRatioMap>({});
+  const [aths, setAths] = useState<Record<string, AthInfo>>({});
+  const [athTried, setAthTried] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,12 +56,83 @@ export function GlobalPage() {
     };
   }, []);
 
-  const peOf = (d: GlobalDef) => (d.nseKey ? ratios[d.nseKey]?.pe ?? null : null);
-  const pbOf = (d: GlobalDef) => (d.nseKey ? ratios[d.nseKey]?.pb ?? null : null);
+  // P/E and P/B for an index. NSE publishes them for its own indices (exact).
+  // Everything else falls back to the P/E of an ETF that tracks the index or a
+  // close cousin (approximate) — Yahoo has no P/E for the indices themselves.
+  function valOf(d: GlobalDef): { pe: number | null; pb: number | null; approx: boolean; via?: string } | null {
+    if (d.nseKey && ratios[d.nseKey]) {
+      const r = ratios[d.nseKey];
+      return { pe: r.pe, pb: r.pb, approx: false };
+    }
+    if (d.etf) {
+      const q = quotes[d.etf];
+      if (q && (q.peTrailing != null || q.priceToBook != null)) {
+        return { pe: q.peTrailing ?? null, pb: q.priceToBook ?? null, approx: true, via: d.etf };
+      }
+    }
+    return null;
+  }
+  const peOf = (d: GlobalDef) => valOf(d)?.pe ?? null;
+
+  // Equity indices only (skip VIX, commodities, FX, crypto), furthest below the
+  // all-time high first.
+  const highRows = GLOBAL.filter(
+    (d) => ["India", "US", "Europe", "Asia-Pacific"].includes(d.group) && !d.neutral
+  )
+    .map((d) => {
+      const q = quotes[d.symbol];
+      const a = aths[d.symbol];
+      const px = q?.price ?? null;
+      // If today's price is above the stored peak (history is cached for hours), it IS the new high.
+      const peak = a && px != null ? Math.max(a.ath, px) : a?.ath ?? null;
+      const drop = peak && px != null ? ((px - peak) / peak) * 100 : null;
+      return { d, drop, a, y1: q?.fiftyTwoWeekChangePct ?? null };
+    })
+    .filter((r) => r.drop != null)
+    .map((r) => r as { d: GlobalDef; drop: number; a: AthInfo | undefined; y1: number | null })
+    .sort((a, b) => a.drop - b.drop);
+  const maxDrop = Math.max(10, ...highRows.map((r) => Math.abs(r.drop)));
+  const equityIdx = GLOBAL.filter(
+    (d) => ["India", "US", "Europe", "Asia-Pacific"].includes(d.group) && !d.neutral
+  );
+  const equityTotal = equityIdx.length;
+  const missingHist = equityIdx
+    .filter((d) => athTried.includes(d.symbol) && !aths[d.symbol])
+    .map((d) => d.name);
+
+  const athLabel = (t: number) =>
+    new Date(t * 1000).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+
+  // "P/E 19.3 · P/B 2.83", with ≈ and a tooltip when it comes from a proxy ETF.
+  function ratioBits(d: GlobalDef) {
+    const v = valOf(d);
+    if (!v || (v.pe == null && v.pb == null)) return null;
+    const mark = v.approx ? "≈" : "";
+    return (
+      <span
+        className="gl-pe"
+        title={v.approx ? `Approximate — P/E of the ${v.via} ETF, which tracks a similar index` : "NSE published"}
+      >
+        {v.pe != null && (
+          <>
+            P/E {mark}
+            <b>{num(v.pe, 1)}</b>
+          </>
+        )}
+        {v.pe != null && v.pb != null && " · "}
+        {v.pb != null && (
+          <>
+            P/B {mark}
+            <b>{num(v.pb, 2)}</b>
+          </>
+        )}
+      </span>
+    );
+  }
 
   const load = useCallback(async () => {
-    const { quotes: q, oldestAt } = await getQuotes(ALL_SYMBOLS, () => {
-      getQuotes(ALL_SYMBOLS).then(({ quotes: q2, oldestAt: o2 }) => {
+    const { quotes: q, oldestAt } = await getQuotes(QUOTE_SYMBOLS, () => {
+      getQuotes(QUOTE_SYMBOLS).then(({ quotes: q2, oldestAt: o2 }) => {
         setQuotes((prev) => ({ ...prev, ...q2 }));
         setFetchedAt(o2);
       });
@@ -90,6 +170,31 @@ export function GlobalPage() {
     };
   }, [ready]);
 
+  // All-time highs for the equity indices — a couple at a time, after the quotes.
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    const queue = GLOBAL.filter(
+      (d) => ["India", "US", "Europe", "Asia-Pacific"].includes(d.group) && !d.neutral
+    ).map((d) => d.symbol);
+    async function worker() {
+      while (queue.length && !cancelled) {
+        const sym = queue.shift()!;
+        try {
+          const a = await getAth(sym);
+          if (!cancelled && a) setAths((p) => ({ ...p, [sym]: a }));
+        } catch {
+          /* leave this index out of the list rather than error */
+        }
+        if (!cancelled) setAthTried((p) => [...p, sym]);
+      }
+    }
+    Promise.all([worker(), worker(), worker()]);
+    return () => {
+      cancelled = true;
+    };
+  }, [ready]);
+
   const firstLoad = fetchedAt == null && Object.keys(quotes).length === 0;
 
   return (
@@ -122,12 +227,72 @@ export function GlobalPage() {
                     <span className={"gl-tile-c " + (d.neutral ? "" : signClass(q?.changePct))}>
                       {pct(q?.changePct ?? null)}
                     </span>
-                    {peOf(d) != null && <span className="gl-tile-pe">P/E {num(peOf(d), 1)}</span>}
+                    {peOf(d) != null && (
+                      <span className="gl-tile-pe">
+                        P/E {valOf(d)?.approx ? "≈" : ""}
+                        {num(peOf(d), 1)}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
             </div>
           </section>
+
+          {highRows.length > 0 && (
+            <section>
+              <h3 className="idx-group">Below all-time high</h3>
+              <p className="gl-hi-note">
+                How far each equity index is below its own all-time high (weekly
+                closes), furthest below first. This is price distance, not
+                valuation — a big drop can mean a market is cheaper or that
+                something is wrong. Not a buy signal. P/E marked ≈ is the P/E of an
+                ETF that tracks a similar index (Yahoo has none for the index
+                itself), so treat it as a rough guide.
+              </p>
+              {athTried.length < equityTotal && (
+                <p className="gl-hi-note">
+                  Loading history… {athTried.length} of {equityTotal} indices.
+                </p>
+              )}
+              {athTried.length >= equityTotal && missingHist.length > 0 && (
+                <p className="gl-hi-note">
+                  Not shown — Yahoo has no price history for: {missingHist.join(", ")}.
+                </p>
+              )}
+              <div className="gl-list">
+                <div className="gl-hi-head">
+                  <span>Index</span>
+                  <span>Below all-time high</span>
+                  <span>1Y</span>
+                </div>
+                {highRows.map(({ d, drop, a, y1 }) => (
+                  <Link
+                    key={d.symbol}
+                    className="gl-hi-row"
+                    to={`/analyse/stock/${encodeURIComponent(d.symbol)}`}
+                  >
+                    <div className="gl-hi-id">
+                      <span className="gl-name">{d.name}</span>
+                      <span className="gl-sub">
+                        <span>{d.group}</span>
+                        {ratioBits(d)}
+                        {a && <span>peak {athLabel(a.athT)}</span>}
+                      </span>
+                    </div>
+                    <div className="gl-hi-bar" title="Distance below all-time high">
+                      <div
+                        className="gl-hi-fill"
+                        style={{ width: `${Math.min(100, (Math.abs(drop) / maxDrop) * 100)}%` }}
+                      />
+                      <span className="gl-hi-val">{pct(drop, 1)}</span>
+                    </div>
+                    <span className={"gl-hi-1y " + signClass(y1)}>{y1 != null ? pct(y1, 1) : "—"}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           {GLOBAL_GROUPS.map((g) => (
             <section key={g}>
@@ -147,16 +312,7 @@ export function GlobalPage() {
                         <span className="gl-sub">
                           {st && <span className={"gl-state " + st.cls}>{st.text}</span>}
                           {d.note && <span>{d.note}</span>}
-                          {peOf(d) != null && (
-                            <span className="gl-pe">
-                              P/E <b>{num(peOf(d), 1)}</b>
-                              {pbOf(d) != null && (
-                                <>
-                                  {" · "}P/B <b>{num(pbOf(d), 2)}</b>
-                                </>
-                              )}
-                            </span>
-                          )}
+                          {ratioBits(d)}
                         </span>
                       </div>
                       <Sparkline data={trends[d.symbol] ?? []} width={56} height={22} />

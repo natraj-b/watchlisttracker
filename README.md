@@ -19,8 +19,12 @@ your device (`localStorage`) — no accounts, no server database.
   Index, US 10Y yield and crypto, each with price, day %, a 1-month sparkline and a
   live / closed tag. A strip up top pulls out what moves Indian markets most
   (USD/INR, Brent, US 10Y, VIX, DXY). Tap a row for the chart. Symbols live in
-  `src/lib/global.ts`; same Yahoo proxy, no extra key. No risk-on/off verdict —
-  information only.
+  `src/lib/global.ts`; same Yahoo proxy, no extra key. A "Below all-time high"
+  list ranks the equity indices by how far under their own all-time high (weekly
+  closes, full history) they sit, with the peak date and 1Y change. P/E and P/B are
+  NSE's own for Nifty indices; for the rest they're the P/E of a tracking ETF
+  (SPY, EWJ, EWG … marked ≈) since Yahoo has none for the index itself. It's price
+  distance, not valuation, and is labelled not a buy signal. No risk-on/off verdict — information only.
 - **Mutual fund screener** — search any Indian scheme, track NAV and 1M/6M/1Y/3Y/5Y
   returns (computed from NAV history), sort by any period
 - **Analyse screen** (stock or fund) — live price + chart, valuation & ratios from
