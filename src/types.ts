@@ -29,6 +29,8 @@ export interface Quote {
   quoteType: string | null;
   faceValue: number | null;
   volume: number | null;
+  /** Yahoo marketState: REGULAR / PRE / POST / CLOSED … Absent on older cached quotes. */
+  marketState?: string | null;
   fetchedAt: number;
 }
 

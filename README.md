@@ -14,6 +14,13 @@ your device (`localStorage`) — no accounts, no server database.
 - **Today's Pick** — ranks your own watchlist by valuation only: non-financials with
   P/E ≤ 25 and financials with P/B ≤ 2, cheapest first, with CMP alongside. Not a
   buy signal — a low multiple can also mean the market sees real risk.
+- **Global markets (Global tab)** — US, Europe and Asia-Pacific indices, commodity
+  futures (gold, silver, crude, Brent, gas, copper), USD/INR, EUR/USD, Dollar
+  Index, US 10Y yield and crypto, each with price, day %, a 1-month sparkline and a
+  live / closed tag. A strip up top pulls out what moves Indian markets most
+  (USD/INR, Brent, US 10Y, VIX, DXY). Tap a row for the chart. Symbols live in
+  `src/lib/global.ts`; same Yahoo proxy, no extra key. No risk-on/off verdict —
+  information only.
 - **Mutual fund screener** — search any Indian scheme, track NAV and 1M/6M/1Y/3Y/5Y
   returns (computed from NAV history), sort by any period
 - **Analyse screen** (stock or fund) — live price + chart, valuation & ratios from
@@ -162,7 +169,7 @@ vite.config.ts          dev proxies + vite-plugin-pwa (service worker / manifest
 src/lib/                 yahoo, mfapi, cache (SWR), storage, symbols, format, firebase
 src/components/          rows, cards, chart, sparkline, sheets, checklist,
                         ErrorBoundary, Skeleton, RecommendationLadder
-src/routes/              Watchlist, MutualFunds, Analyse (stock / fund), StockReport
+src/routes/              Watchlist, MutualFunds, Global, Analyse (stock / fund), StockReport
 src/lib/fundamentals.ts  builds the 8-tab Fundamental report (Yahoo + NSE → signals)
 ```
 

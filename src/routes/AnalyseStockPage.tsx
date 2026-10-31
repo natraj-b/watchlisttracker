@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Candle, Quote } from "../types";
 import { getChart, getQuotes, getQuoteSummary } from "../lib/yahoo";
-import { deepLinks } from "../lib/symbols";
+import { deepLinks, INDICES } from "../lib/symbols";
+import { getIndexRatios, type IndexRatio } from "../lib/nse";
+import { globalDef, isEquitySymbol, symbolKind } from "../lib/global";
 import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
 import { RefreshBar } from "../components/RefreshBar";
 import { PriceChart } from "../components/PriceChart";
@@ -20,6 +22,27 @@ export function AnalyseStockPage() {
   const [candles, setCandles] = useState<Candle[]>([]);
   const [range, setRange] = useState("1y");
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
+  const [idxRatio, setIdxRatio] = useState<IndexRatio | null>(null);
+
+  const equity = isEquitySymbol(sym);
+  const idxDef = INDICES.find((i) => i.symbol === sym);
+
+  // NSE publishes P/E, P/B and dividend yield per index — the same source the
+  // Stocks → Indices tab uses.
+  useEffect(() => {
+    if (!idxDef?.nseKey) return;
+    let cancelled = false;
+    const key = idxDef.nseKey;
+    const apply = (m: Record<string, IndexRatio>) => !cancelled && setIdxRatio(m[key] ?? null);
+    getIndexRatios(() => {
+      getIndexRatios().then(apply);
+    })
+      .then(apply)
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [idxDef?.nseKey]);
 
   const load = useCallback(async () => {
     const { quotes, oldestAt } = await getQuotes([sym], () => {
@@ -48,15 +71,22 @@ export function AnalyseStockPage() {
   const raw = (o: any) => (o && typeof o === "object" ? o.raw : o) ?? null;
 
   const live = [
-    { label: "CMP", value: num(quote?.price ?? null) },
+    { label: equity ? "CMP" : "Level", value: num(quote?.price ?? null) },
     { label: "Day change", value: pct(quote?.changePct ?? null) },
     { label: "52W High", value: num(quote?.fiftyTwoWeekHigh ?? null) },
     { label: "52W Low", value: num(quote?.fiftyTwoWeekLow ?? null) },
     { label: "52W change", value: pct(quote?.fiftyTwoWeekChangePct ?? null) },
-    { label: "Market cap", value: crore(quote?.marketCap ?? null) },
-    { label: "Volume", value: num(quote?.volume ?? null, 0) },
-    { label: "Face value", value: "—  (see source)" },
+    // Market cap / volume / face value only mean something for a listed company.
+    ...(equity
+      ? [
+          { label: "Market cap", value: crore(quote?.marketCap ?? null) },
+          { label: "Volume", value: num(quote?.volume ?? null, 0) },
+          { label: "Face value", value: "—  (see source)" },
+        ]
+      : []),
   ];
+
+  const title = equity ? bare : globalDef(sym)?.name ?? idxDef?.name ?? quote?.name ?? bare;
 
   const val = [
     { label: "P/E (TTM)", value: num(quote?.peTrailing ?? null) },
@@ -79,20 +109,30 @@ export function AnalyseStockPage() {
 
       <div className="analyse-head">
         <div>
-          <h2>{bare}</h2>
+          <h2>{title}</h2>
           <p className="analyse-sub">
-            {quote?.name || sym} · {prof.sector || quote?.sector || "—"}
-            {prof.industry ? ` · ${prof.industry}` : ""}
+            {equity ? (
+              <>
+                {quote?.name || sym} · {prof.sector || quote?.sector || "—"}
+                {prof.industry ? ` · ${prof.industry}` : ""}
+              </>
+            ) : (
+              <>
+                {symbolKind(sym)} · {bare}
+              </>
+            )}
           </p>
         </div>
-        <Link to="/" className="chip">
-          ← Watchlist
+        <Link to={equity ? "/" : "/global"} className="chip">
+          {equity ? "← Watchlist" : "← Global"}
         </Link>
       </div>
 
-      <Link to={`/analyse/stock/${encodeURIComponent(sym)}/report`} className="report-cta">
-        📊 Full fundamental report — valuation, growth, health, returns &amp; a view
-      </Link>
+      {isEquitySymbol(sym) && (
+        <Link to={`/analyse/stock/${encodeURIComponent(sym)}/report`} className="report-cta">
+          📊 Full fundamental report — valuation, growth, health, returns &amp; a view
+        </Link>
+      )}
 
       <PriceChart candles={candles} range={range} onRange={setRange} />
 
@@ -103,6 +143,23 @@ export function AnalyseStockPage() {
         <MetricGrid items={live} />
       </section>
 
+      {idxRatio && (
+        <section>
+          <h3 className="sec-title">
+            Index valuation <span className="badge yh">NSE</span>
+          </h3>
+          <MetricGrid
+            items={[
+              { label: "P/E", value: num(idxRatio.pe, 2) },
+              { label: "P/B", value: num(idxRatio.pb, 2) },
+              { label: "Dividend yield", value: idxRatio.dy != null ? `${num(idxRatio.dy, 2)}%` : "—" },
+            ]}
+          />
+        </section>
+      )}
+
+      {equity && (
+      <>
       <section>
         <h3 className="sec-title">
           Valuation & ratios <span className="badge yh">Yahoo · latest</span>
@@ -120,6 +177,8 @@ export function AnalyseStockPage() {
         </h3>
         <ResearchChecklist symbolKey={sym} links={deepLinks(sym, quote?.name || bare)} />
       </section>
+      </>
+      )}
 
       <p className="disclaimer">
         Data aggregated from public sources for information only. Not investment
