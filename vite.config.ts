@@ -36,8 +36,15 @@ function yahooDevProxy(): Plugin {
   let cookie: string | null = null;
   let crumb: string | null = null;
 
-  async function ensureAuth() {
-    if (crumb) return;
+  // Single-flight so concurrent first requests share one cookie+crumb handshake.
+  let authInflight: Promise<void> | null = null;
+  function ensureAuth(force = false): Promise<void> {
+    if (crumb && !force) return Promise.resolve();
+    if (!authInflight) authInflight = doAuth().finally(() => (authInflight = null));
+    return authInflight;
+  }
+
+  async function doAuth() {
     const r = await fetch("https://fc.yahoo.com", {
       headers: { "User-Agent": UA },
       redirect: "manual",
@@ -71,21 +78,26 @@ function yahooDevProxy(): Plugin {
           await ensureAuth();
           let body = "";
           let status = 502;
-          for (const host of HOSTS) {
-            const y = new URL(host + path + (qs ? "?" + qs : ""));
-            if (NEEDS_CRUMB.test(y.pathname) && crumb)
-              y.searchParams.set("crumb", crumb);
-            const yr = await fetch(y.toString(), {
-              headers: {
-                "User-Agent": UA,
-                Accept: "application/json",
-                ...(cookie ? { Cookie: cookie } : {}),
-              },
-            }).catch(() => null);
-            if (!yr) continue;
-            body = await yr.text();
-            status = yr.status;
-            if (yr.ok) break;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            for (const host of HOSTS) {
+              const y = new URL(host + path + (qs ? "?" + qs : ""));
+              if (NEEDS_CRUMB.test(y.pathname) && crumb)
+                y.searchParams.set("crumb", crumb);
+              const yr = await fetch(y.toString(), {
+                headers: {
+                  "User-Agent": UA,
+                  Accept: "application/json",
+                  ...(cookie ? { Cookie: cookie } : {}),
+                },
+              }).catch(() => null);
+              if (!yr) continue;
+              body = await yr.text();
+              status = yr.status;
+              if (yr.ok) break;
+            }
+            // Stale/mismatched crumb: re-handshake once and retry.
+            if (![401, 403, 429].includes(status)) break;
+            await ensureAuth(true);
           }
           res.statusCode = status;
           res.setHeader("Content-Type", "application/json");

@@ -603,3 +603,34 @@ button { font: inherit; cursor: pointer; }
 
 .rp-horizon { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .rp-horizon .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* global markets */
+.gl-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.gl-tile {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); text-decoration: none;
+}
+.gl-tile-l { font-size: 10px; text-transform: uppercase; color: var(--muted); }
+.gl-tile-v { font-size: 15px; font-weight: 600; }
+.gl-tile-c { font-size: 11px; font-weight: 600; }
+.gl-list {
+  display: flex; flex-direction: column; margin: 6px 0 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.gl-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center;
+  padding: 10px 12px; color: var(--text); text-decoration: none; border-top: 1px solid var(--border);
+}
+.gl-row:first-child { border-top: 0; }
+.gl-id { display: flex; flex-direction: column; min-width: 0; }
+.gl-name { font-size: 13px; font-weight: 600; }
+.gl-sub { display: flex; gap: 6px; font-size: 10px; color: var(--muted); }
+.gl-state { font-weight: 700; text-transform: uppercase; }
+.gl-state.open { color: var(--up); }
+.gl-state.pre { color: #e0a020; }
+.gl-price { display: flex; flex-direction: column; align-items: flex-end; min-width: 76px; }
+.gl-cmp { font-size: 14px; font-weight: 600; }
+.gl-chg { font-size: 11px; font-weight: 600; }
+.gl-tile-pe { font-size: 10px; color: var(--muted); }
+.gl-pe b { color: var(--text); font-weight: 600; }

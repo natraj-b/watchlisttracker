@@ -52,6 +52,7 @@ function mapQuote(q: any): Quote {
     quoteType: q.quoteType ?? null,
     faceValue: null,
     volume: q.regularMarketVolume ?? null,
+    marketState: q.marketState ?? null,
     fetchedAt: Date.now(),
   };
 }

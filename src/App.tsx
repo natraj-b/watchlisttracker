@@ -18,6 +18,9 @@ const AnalyseStockPage = lazy(() =>
 const AnalyseFundPage = lazy(() =>
   import("./routes/AnalyseFundPage").then((m) => ({ default: m.AnalyseFundPage }))
 );
+const GlobalPage = lazy(() =>
+  import("./routes/GlobalPage").then((m) => ({ default: m.GlobalPage }))
+);
 const StockReportPage = lazy(() =>
   import("./routes/StockReportPage").then((m) => ({ default: m.StockReportPage }))
 );
@@ -82,6 +85,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<WatchlistPage />} />
               <Route path="/funds" element={<MutualFundsPage />} />
+              <Route path="/global" element={<GlobalPage />} />
               <Route path="/analyse/stock/:symbol" element={<AnalyseStockPage />} />
               <Route path="/analyse/stock/:symbol/report" element={<StockReportPage />} />
               <Route path="/analyse/fund/:code" element={<AnalyseFundPage />} />
@@ -97,6 +101,9 @@ export default function App() {
         </NavLink>
         <NavLink to="/funds">
           <span>Funds</span>
+        </NavLink>
+        <NavLink to="/global">
+          <span>Global</span>
         </NavLink>
       </nav>
     </div>

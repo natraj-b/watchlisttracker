@@ -49,8 +49,17 @@ function setCookiesOf(r: any): string[] {
   return one ? [one] : [];
 }
 
-async function ensureAuth(force: boolean): Promise<void> {
-  if (!force && crumb && Date.now() - authAt < 25 * 60_000) return;
+// Single-flight: a burst of concurrent requests on a cold instance must share one
+// cookie+crumb handshake, or they overwrite each other's pair and Yahoo 401s.
+let authInflight: Promise<void> | null = null;
+
+function ensureAuth(force: boolean): Promise<void> {
+  if (!force && crumb && Date.now() - authAt < 25 * 60_000) return Promise.resolve();
+  if (!authInflight) authInflight = doAuth().finally(() => (authInflight = null));
+  return authInflight;
+}
+
+async function doAuth(): Promise<void> {
   authAt = Date.now();
 
   for (const seed of [
