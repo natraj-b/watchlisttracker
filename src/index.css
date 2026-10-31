@@ -634,3 +634,22 @@ button { font: inherit; cursor: pointer; }
 .gl-chg { font-size: 11px; font-weight: 600; }
 .gl-tile-pe { font-size: 10px; color: var(--muted); }
 .gl-pe b { color: var(--text); font-weight: 600; }
+
+/* distance from 52-week high */
+.gl-hi-note { font-size: 11px; color: var(--muted); margin: 4px 2px 8px; line-height: 1.5; }
+.gl-hi-head, .gl-hi-row {
+  display: grid; grid-template-columns: 1.1fr 1.3fr 52px; gap: 10px; align-items: center; padding: 9px 12px;
+}
+.gl-hi-head { font-size: 10px; text-transform: uppercase; color: var(--muted); background: var(--surface-2); }
+.gl-hi-head span:last-child, .gl-hi-1y { text-align: right; }
+.gl-hi-row { color: var(--text); text-decoration: none; border-top: 1px solid var(--border); }
+.gl-hi-id { display: flex; flex-direction: column; min-width: 0; }
+.gl-hi-bar { position: relative; height: 22px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+.gl-hi-fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); opacity: 0.28; }
+.gl-hi-val { position: relative; z-index: 1; display: block; line-height: 22px; padding: 0 8px; font-size: 12px; font-weight: 600; }
+.gl-hi-1y { font-size: 12px; font-weight: 600; }
+
+/* all-time-high list: give the name column room on narrow screens */
+.gl-hi-head, .gl-hi-row { grid-template-columns: 1.7fr 1fr 46px; gap: 8px; }
+.gl-hi-id .gl-sub { flex-wrap: wrap; gap: 0 8px; }
+.gl-pe, .gl-hi-id .gl-sub span { white-space: nowrap; }
