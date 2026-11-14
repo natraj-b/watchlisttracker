@@ -13,6 +13,7 @@ import { MetricGrid } from "../components/MetricGrid";
 import { AddSymbolSheet } from "../components/AddSymbolSheet";
 import { RecommendationLadder, type LadderRow } from "../components/RecommendationLadder";
 import { SkeletonRows } from "../components/Skeleton";
+import { LiveIndiaSignals } from "../components/IndiaSignals";
 
 type Tab = Section | "idx" | "picks";
 type ViewMode = "flat" | "sector";
@@ -72,7 +73,7 @@ export function WatchlistPage() {
   const [items, setItems] = useState<WatchItem[]>(() => store.getStocks());
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
-  const [tab, setTab] = useState<Tab>("nonfin");
+  const [tab, setTab] = useState<Tab>("picks");
   const [sheet, setSheet] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("flat");
   const [sortKey, setSortKey] = useState<SortKey>("metric");
@@ -81,6 +82,7 @@ export function WatchlistPage() {
     store.getCustomIndices()
   );
   const [idxSheet, setIdxSheet] = useState(false);
+  const [query, setQuery] = useState("");
 
   const allIndices: IndexDef[] = [
     ...INDICES,
@@ -217,7 +219,16 @@ export function WatchlistPage() {
     store.setCustomIndices(next);
   }
 
-  const list = items.filter((i) => i.section === tab);
+  const sectionList = items.filter((i) => i.section === tab);
+  const needle = query.trim().toLowerCase();
+  // Match the ticker as shown (without the .NS/.BO suffix) or the company name.
+  const list = needle
+    ? sectionList.filter((i) =>
+        [i.symbol.replace(/\.(NS|BO)$/i, ""), i.name, quotes[i.symbol]?.name ?? ""].some(
+          (s) => s.toLowerCase().includes(needle)
+        )
+      )
+    : sectionList;
   // First paint after a cold load: watchlist items are known (from localStorage)
   // but no quote has arrived yet. Show skeletons rather than "nothing here".
   const firstLoad = fetchedAt == null && Object.keys(quotes).length === 0;
@@ -290,6 +301,27 @@ export function WatchlistPage() {
         />
       ) : (
         <>
+          <div className="listsearch">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search your watchlist"
+              aria-label="Search your watchlist"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+            {query && (
+              <button
+                className="listsearch-clear"
+                aria-label="Clear search"
+                onClick={() => setQuery("")}
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <div className="listbar">
             <div className="listbar-views" role="group" aria-label="Layout">
               <button
@@ -326,7 +358,9 @@ export function WatchlistPage() {
             <div className="list">
               {list.length === 0 && (
                 <div className="empty">
-                  No {tab === "fin" ? "financial" : "non-financial"} stocks yet.
+                  {needle && sectionList.length > 0
+                    ? `No ${tab === "fin" ? "financial" : "non-financial"} stocks match “${query.trim()}”.`
+                    : `No ${tab === "fin" ? "financial" : "non-financial"} stocks yet.`}
                 </div>
               )}
               {list.length > 0 &&
@@ -398,6 +432,7 @@ function TodaysPickView({
 
   return (
     <div className="picks-view">
+      <LiveIndiaSignals row />
       <p className="picks-note">
         Ranked from your own watchlist only — cheapest valuation first. Not a
         buy recommendation; low P/E or P/B can also mean the market sees real

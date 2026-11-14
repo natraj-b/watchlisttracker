@@ -6,13 +6,14 @@ import { getIndexRatios, type IndexRatioMap } from "../lib/nse";
 import {
   GLOBAL,
   GLOBAL_GROUPS,
-  INDIA_SIGNALS,
   QUOTE_SYMBOLS,
-  globalDef,
+  formatGlobalPrice as fmt,
+  valuationOf,
   type GlobalDef,
 } from "../lib/global";
 import { useRefreshOnFocus } from "../lib/useRefreshOnFocus";
 import { num, pct, signClass } from "../lib/format";
+import { IndiaSignals } from "../components/IndiaSignals";
 import { RefreshBar } from "../components/RefreshBar";
 import { Sparkline } from "../components/Sparkline";
 import { SkeletonRows } from "../components/Skeleton";
@@ -26,13 +27,6 @@ function stateLabel(q: Quote | undefined): { text: string; cls: string } | null 
   if (s.startsWith("PRE")) return { text: "pre-mkt", cls: "pre" };
   if (s.startsWith("POST")) return { text: "after-hrs", cls: "pre" };
   return { text: "closed", cls: "closed" };
-}
-
-function fmt(d: GlobalDef, q: Quote | undefined): string {
-  const v = q?.price ?? null;
-  if (v == null) return "—";
-  const digits = d.digits ?? (v >= 1000 ? 0 : 2);
-  return num(v, digits) + (d.suffix ?? "");
 }
 
 export function GlobalPage() {
@@ -56,23 +50,7 @@ export function GlobalPage() {
     };
   }, []);
 
-  // P/E and P/B for an index. NSE publishes them for its own indices (exact).
-  // Everything else falls back to the P/E of an ETF that tracks the index or a
-  // close cousin (approximate) — Yahoo has no P/E for the indices themselves.
-  function valOf(d: GlobalDef): { pe: number | null; pb: number | null; approx: boolean; via?: string } | null {
-    if (d.nseKey && ratios[d.nseKey]) {
-      const r = ratios[d.nseKey];
-      return { pe: r.pe, pb: r.pb, approx: false };
-    }
-    if (d.etf) {
-      const q = quotes[d.etf];
-      if (q && (q.peTrailing != null || q.priceToBook != null)) {
-        return { pe: q.peTrailing ?? null, pb: q.priceToBook ?? null, approx: true, via: d.etf };
-      }
-    }
-    return null;
-  }
-  const peOf = (d: GlobalDef) => valOf(d)?.pe ?? null;
+  const valOf = (d: GlobalDef) => valuationOf(d, quotes, ratios);
 
   // Equity indices only (skip VIX, commodities, FX, crypto), furthest below the
   // all-time high first.
@@ -210,34 +188,7 @@ export function GlobalPage() {
         <SkeletonRows count={6} />
       ) : (
         <>
-          <section>
-            <h3 className="sec-title">India &amp; the global moves that matter</h3>
-            <div className="gl-strip">
-              {INDIA_SIGNALS.map((sym) => {
-                const d = globalDef(sym)!;
-                const q = quotes[sym];
-                return (
-                  <Link
-                    key={sym}
-                    className="gl-tile"
-                    to={`/analyse/stock/${encodeURIComponent(sym)}`}
-                  >
-                    <span className="gl-tile-l">{d.name}</span>
-                    <span className="gl-tile-v">{fmt(d, q)}</span>
-                    <span className={"gl-tile-c " + (d.neutral ? "" : signClass(q?.changePct))}>
-                      {pct(q?.changePct ?? null)}
-                    </span>
-                    {peOf(d) != null && (
-                      <span className="gl-tile-pe">
-                        P/E {valOf(d)?.approx ? "≈" : ""}
-                        {num(peOf(d), 1)}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
+          <IndiaSignals quotes={quotes} ratios={ratios} />
 
           {highRows.length > 0 && (
             <section>

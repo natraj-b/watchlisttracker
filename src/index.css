@@ -138,6 +138,21 @@ button { font: inherit; cursor: pointer; }
 }
 .tabs button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 
+/* watchlist search */
+.listsearch { position: relative; margin: 2px 0 8px; }
+.listsearch input {
+  width: 100%; padding: 9px 34px 9px 12px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); border-radius: 10px; font-size: 14px;
+  -webkit-appearance: none; appearance: none;
+}
+.listsearch input::-webkit-search-cancel-button { display: none; }
+.listsearch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.listsearch-clear {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 30px; border: 0; background: transparent;
+  color: var(--muted); font-size: 13px; border-radius: 50%; cursor: pointer;
+}
+
 /* view/sort toolbar */
 .listbar { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px; }
 .listbar-views { display: flex; gap: 6px; }
@@ -611,6 +626,10 @@ button { font: inherit; cursor: pointer; }
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   color: var(--text); text-decoration: none;
 }
+/* one swipeable line of tiles, for the top of Today's Pick */
+.gl-strip--row { display: flex; overflow-x: auto; scroll-snap-type: x proximity; margin: 0 -2px 4px; padding: 2px; scrollbar-width: none; }
+.gl-strip--row::-webkit-scrollbar { display: none; }
+.gl-strip--row .gl-tile { flex: 0 0 116px; scroll-snap-align: start; }
 .gl-tile-l { font-size: 10px; text-transform: uppercase; color: var(--muted); }
 .gl-tile-v { font-size: 15px; font-weight: 600; }
 .gl-tile-c { font-size: 11px; font-weight: 600; }
