@@ -2,6 +2,10 @@
 // own because Yahoo's shortName is truncated or odd for several of these
 // ("DAX   P", "Brent Crude Oil Last Day Financ…").
 
+import type { Quote } from "../types";
+import type { IndexRatioMap } from "./nse";
+import { num } from "./format";
+
 export type GlobalGroup =
   | "India"
   | "US"
@@ -102,6 +106,42 @@ export function isEquitySymbol(symbol: string): boolean {
     /-USD$/i.test(symbol) ||
     symbol === "DX-Y.NYB"
   );
+}
+
+/** The price as shown on a Global tile or row: the symbol's own decimals and suffix. */
+export function formatGlobalPrice(d: GlobalDef, q: Quote | undefined): string {
+  const v = q?.price ?? null;
+  if (v == null) return "—";
+  const digits = d.digits ?? (v >= 1000 ? 0 : 2);
+  return num(v, digits) + (d.suffix ?? "");
+}
+
+export interface Valuation {
+  pe: number | null;
+  pb: number | null;
+  approx: boolean;
+  via?: string;
+}
+
+/** P/E and P/B for an index. NSE publishes them for its own indices (exact).
+ * Everything else falls back to the P/E of an ETF that tracks the index or a
+ * close cousin (approximate) — Yahoo has no P/E for the indices themselves. */
+export function valuationOf(
+  d: GlobalDef,
+  quotes: Record<string, Quote>,
+  ratios: IndexRatioMap
+): Valuation | null {
+  if (d.nseKey && ratios[d.nseKey]) {
+    const r = ratios[d.nseKey];
+    return { pe: r.pe, pb: r.pb, approx: false };
+  }
+  if (d.etf) {
+    const q = quotes[d.etf];
+    if (q && (q.peTrailing != null || q.priceToBook != null)) {
+      return { pe: q.peTrailing ?? null, pb: q.priceToBook ?? null, approx: true, via: d.etf };
+    }
+  }
+  return null;
 }
 
 /** Human label for a non-equity symbol, for the Analyse subtitle. */
